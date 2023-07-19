@@ -1,12 +1,15 @@
 import torch
 import torchvision
+import random
+
+random.seed(0)
 
 # Here is an example of parameters
 # D = 784 #dimension
 # k = 3 # num of 2d planes in dim D
 # n = 6*(10**3) # num of points in each plane
 
-def generate_dataset(D, k, n, shift_class=0):
+def generate_dataset(D, k, n, shift_class=0, intercl_var = 1):
     phi = [] #list of k ontonormal bases in k planes
     for j in range(k):
         # creating random planes
@@ -23,7 +26,9 @@ def generate_dataset(D, k, n, shift_class=0):
         samples = m.sample(sample_shape=(n,)).T
         #samples = normalize(samples, p = 1, dim = 0)
         #data.append(normalize(torch.matmul(phi[i], samples)))
-        data.append(torch.matmul(phi[i], samples))
+        samples_transformed = torch.matmul(phi[i], samples) + torch.randn(D,1) * intercl_var
+        data.append(samples_transformed)
+        #data.append(torch.matmul(phi[i], samples))
     data_tensor = torch.cat(data, dim=1)
 
     data_tensor = data_tensor.T
