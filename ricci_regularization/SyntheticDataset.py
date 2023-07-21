@@ -2,14 +2,14 @@ import torch
 import torchvision
 import random
 
-random.seed(0)
+torch.manual_seed(0)
 
 # Here is an example of parameters
 # D = 784 #dimension
 # k = 3 # num of 2d planes in dim D
 # n = 6*(10**3) # num of points in each plane
 
-def generate_dataset(D, k, n, shift_class=0, intercl_var = 1):
+def generate_dataset(D, k, n, shift_class=0, intercl_var = 0):
     phi = [] #list of k ontonormal bases in k planes
     for j in range(k):
         # creating random planes
