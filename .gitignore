@@ -123,5 +123,10 @@ dmypy.json
 #Datasets
 ipynb/demos/data/*
 ipynb/dataset/*
+
+#nn weights
 nn_weights/*
 *.pt
+
+#executed notebooks (with pictures and plots):
+executed_notebooks/*
