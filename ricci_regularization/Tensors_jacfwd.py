@@ -38,6 +38,7 @@ def Ch_der_jacfwd (u, function):
     Ch = functools.partial(Ch_jacfwd, function=function)
     dCh = jacfwd(Ch)(u).squeeze()
     return dCh
+
 Ch_der_jacfwd_vmap = TF.vmap(Ch_der_jacfwd)
 
 # Riemann curvature tensor (3,1)
@@ -48,13 +49,20 @@ def Riem_jacfwd(u, function):
     Riem = torch.einsum("iljk->ijkl",Ch_der) - torch.einsum("ikjl->ijkl",Ch_der)
     Riem += torch.einsum("ikp,plj->ijkl", Ch, Ch) - torch.einsum("ilp,pkj->ijkl", Ch, Ch)
     return Riem
+
 def Ric_jacfwd(u, function):
     Riemann = Riem_jacfwd(u, function)
     Ric = torch.einsum("cacb->ab",Riemann)
     return Ric
+
 Ric_jacfwd_vmap = TF.vmap(Ric_jacfwd)
 
-# functions with sphere and Lobachevsky plane pullback metrics
+# Functions with sphere and Lobachevsky plane pullback metrics
+
+# Sphere embedding
+# Input: u is a 2d-vector with longitude and lattitude
+# Outut: output contains the 3d coordinates of sphere and padded with zeros (781 dimension)
+#        -> 784 dim in total
 def my_fun_sphere(u):
     u = u.flatten()
     output = torch.cat((torch.sin(u[0])*torch.cos(u[1]).unsqueeze(0),
@@ -64,6 +72,7 @@ def my_fun_sphere(u):
     output = output.flatten()
     return output
 
+# Hyperbolic plane embedding
 # Partial embedding (for y>c) of Lobachevsky plane to R^3 
 # (formally here it is R^784)
 # ds^2 = 1/y^2(dx^2 + dy^2)
