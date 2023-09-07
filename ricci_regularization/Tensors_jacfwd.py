@@ -63,11 +63,19 @@ Ric_jacfwd_vmap = TF.vmap(Ric_jacfwd)
 # Input: u is a 2d-vector with longitude and lattitude
 # Outut: output contains the 3d coordinates of sphere and padded with zeros (781 dimension)
 #        -> 784 dim in total
+# u = (\theta, \phi)
+# ds^2 = (d\theta)^2 + sin^2(\theta)*(d\phi)^2
 def my_fun_sphere(u):
     u = u.flatten()
-    output = torch.cat((torch.sin(u[0])*torch.cos(u[1]).unsqueeze(0),
-    torch.sin(u[0])*torch.sin(u[1]).unsqueeze(0),
-    torch.cos(u[0]).unsqueeze(0)),dim=-1)
+    
+    x = torch.sin(u[0])*torch.cos(u[1])
+    y = torch.sin(u[0])*torch.sin(u[1])
+    z = torch.cos(u[0])
+
+    x = x.unsqueeze(0)
+    y = y.unsqueeze(0)
+    z = z.unsqueeze(0)
+    output = torch.cat((x, y, z),dim=-1)
     output = torch.cat((output.unsqueeze(0),torch.zeros(781).unsqueeze(0)),dim=1)
     output = output.flatten()
     return output
