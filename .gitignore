@@ -130,3 +130,6 @@ nn_weights/*
 
 #executed notebooks (with pictures and plots):
 executed_notebooks/*
+
+#Playgrounds, unfinished notebooks
+ipynb/playgrounds/*
