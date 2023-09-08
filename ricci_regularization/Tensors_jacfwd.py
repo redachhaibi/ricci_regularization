@@ -57,8 +57,31 @@ def Ric_jacfwd(u, function):
 
 Ric_jacfwd_vmap = TF.vmap(Ric_jacfwd)
 
-# Functions with sphere and Lobachevsky plane pullback metrics
+def Sc_jacfwd (u, function):
+    metric = metric_jacfwd(u, function=function)
+    Ricci = Ric_jacfwd(u, function=function)
+    metric_inv = torch.inverse(metric)
+    Sc = torch.einsum('ab,ab',metric_inv,Ricci)
+    return Sc
+Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
 
+
+# polynomial local diffeomorphysm of R^2
+def my_fun_polinomial(u):
+    u = u.flatten()
+    x = u[0]
+    y = u[1]
+
+    x_out = x**2 + y + 37*x
+    y_out = y**3+x*y
+
+    x_out = x_out.unsqueeze(0)
+    y_out = y_out.unsqueeze(0)
+    output = torch.cat((x_out, y_out),dim=-1)
+    output = output.flatten()
+    return output
+
+# Functions with sphere and Lobachevsky plane pullback metrics
 # Sphere embedding
 # Input: u is a 2d-vector with longitude and lattitude
 # Outut: output contains the 3d coordinates of sphere and padded with zeros (781 dimension)
