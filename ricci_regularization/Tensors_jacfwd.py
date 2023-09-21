@@ -22,6 +22,7 @@ def metric_der_jacfwd (u, function):
     # squeezing is needed to get rid of 1-dimentions 
     # occuring when using jacfwd
     return dg
+metric_der_jacfwd_vmap = TF.vmap(metric_der_jacfwd)
 
 def Ch_jacfwd (u, function):
     g = metric_jacfwd(u,function)
