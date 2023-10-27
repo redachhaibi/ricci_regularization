@@ -116,9 +116,13 @@ ENV/
 .dmypy.json
 dmypy.json
 
-#Images and gifs
+#Images, gifs, pdf files
 *.png
 *.gif
+*.pdf
+
+#plots folder
+plots/*
 
 #Datasets
 ipynb/demos/data/*
