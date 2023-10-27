@@ -9,7 +9,8 @@ torch.manual_seed(0)
 # k = 3 # num of 2d planes in dim D
 # n = 6*(10**3) # num of points in each plane
 
-def generate_dataset(D, k, n, shift_class=0, intercl_var = 0):
+# old style 
+def generate_dataset(D, k, n, shift_class=0, intercl_var = 0, var_class = 1):
     phi = [] #list of k ontonormal bases in k planes
     for j in range(k):
         # creating random planes
@@ -21,7 +22,7 @@ def generate_dataset(D, k, n, shift_class=0, intercl_var = 0):
     #creating samples from normal distributions via torch distributions
     data = []
     for i in range(k):
-        m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(2) + shift_class*(i+1), torch.eye(2))
+        m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(2) + shift_class*(i+1), var_class*torch.eye(2))
         #m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(2), torch.eye(2))
         samples = m.sample(sample_shape=(n,)).T
         #samples = normalize(samples, p = 1, dim = 0)
@@ -49,10 +50,12 @@ def generate_dataset(D, k, n, shift_class=0, intercl_var = 0):
 
     return train_dataset
 
+
+# new style
 # definition using class
 
 class SyntheticDataset:
-    def __init__(self, k = 3, n = 6000, d=2, D=784, shift_class=0, intercl_var = 0):
+    def __init__(self, k = 3, n = 6000, d=2, D=784, shift_class=0, var_class = 1, intercl_var = 0):
         phi = [] #list of k ontonormal bases in k planes
         for j in range(k):
             # creating random planes
@@ -65,7 +68,7 @@ class SyntheticDataset:
         data = []
         shifts = []
         for i in range(k):
-            m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(d) + shift_class*(i+1), torch.eye(d))
+            m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(d) + shift_class*(i+1), var_class*torch.eye(d))
             #m = torch.distributions.multivariate_normal.MultivariateNormal(torch.zeros(2), torch.eye(2))
             samples = m.sample(sample_shape=(n,)).T
             

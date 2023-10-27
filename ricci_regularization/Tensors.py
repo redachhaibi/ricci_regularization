@@ -7,6 +7,7 @@ from functorch import jacrev,jacfwd
 import matplotlib.pyplot as plt
 import functools
 
+# jacfwd
 def metric_jacfwd(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
     jac = jacfwd(function)(u)
@@ -65,6 +66,66 @@ def Sc_jacfwd (u, function):
     Sc = torch.einsum('ab,ab',metric_inv,Ricci)
     return Sc
 Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
+
+# jacrev
+def metric_jacrev(u, function, latent_space_dim=2):
+    u = u.reshape(-1,latent_space_dim)
+    jac = jacrev(function)(u)
+    jac = jac.reshape(-1,latent_space_dim)
+    metric = torch.matmul(jac.T,jac)
+    return metric
+
+metric_jacrev_vmap = TF.vmap(metric_jacrev)
+
+def metric_der_jacrev (u, function):
+    metric = functools.partial(metric_jacrev, function=function)
+    dg = jacrev(metric)(u).squeeze()
+    # squeezing is needed to get rid of 1-dimentions 
+    # occuring when using jacrev
+    return dg
+metric_der_jacrev_vmap = TF.vmap(metric_der_jacrev)
+
+def Ch_jacrev (u, function):
+    g = metric_jacrev(u,function)
+    g_inv = torch.inverse(g)
+    dg = metric_der_jacrev(u,function)
+    Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
+              torch.einsum('im,mlk->ikl',g_inv,dg)-
+              torch.einsum('im,klm->ikl',g_inv,dg)
+              )
+    return Ch
+Ch_jacrev_vmap = TF.vmap(Ch_jacrev)
+
+def Ch_der_jacrev (u, function):
+    Ch = functools.partial(Ch_jacrev, function=function)
+    dCh = jacrev(Ch)(u).squeeze()
+    return dCh
+
+Ch_der_jacrev_vmap = TF.vmap(Ch_der_jacrev)
+
+# Riemann curvature tensor (3,1)
+def Riem_jacrev(u, function):
+    Ch = Ch_jacrev(u, function)
+    Ch_der = Ch_der_jacrev(u, function)
+
+    Riem = torch.einsum("iljk->ijkl",Ch_der) - torch.einsum("ikjl->ijkl",Ch_der)
+    Riem += torch.einsum("ikp,plj->ijkl", Ch, Ch) - torch.einsum("ilp,pkj->ijkl", Ch, Ch)
+    return Riem
+
+def Ric_jacrev(u, function):
+    Riemann = Riem_jacrev(u, function)
+    Ric = torch.einsum("cacb->ab",Riemann)
+    return Ric
+
+Ric_jacrev_vmap = TF.vmap(Ric_jacrev)
+
+def Sc_jacrev (u, function):
+    metric = metric_jacrev(u, function=function)
+    Ricci = Ric_jacrev(u, function=function)
+    metric_inv = torch.inverse(metric)
+    Sc = torch.einsum('ab,ab',metric_inv,Ricci)
+    return Sc
+Sc_jacrev_vmap = TF.vmap(Sc_jacrev)
 
 
 # polynomial local diffeomorphysm of R^2

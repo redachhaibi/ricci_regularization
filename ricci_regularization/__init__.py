@@ -1,3 +1,3 @@
 from .SyntheticDataset import *
-from .Tensors_jacfwd import *
+from .Tensors import *
 from .Plotting_tools import *
