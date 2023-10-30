@@ -81,8 +81,9 @@ class SyntheticDataset:
         data_tensor = torch.cat(data, dim=1)
 
         data_tensor = data_tensor.T
-        data_tensor = data_tensor.reshape(k*n, 1, D)
-
+        #data_tensor = data_tensor.reshape(k*n, 1, D)
+        data_tensor = data_tensor.reshape(k*n, D)
+        
         labels_list = []
         for i in range(k):
             labels_list.append(i*(torch.ones(n)))
@@ -99,3 +100,5 @@ class SyntheticDataset:
         self.create = train_dataset
         self.rotations = phi
         self.shifts = shifts
+        self.points = data_tensor
+        self.labels = labels
