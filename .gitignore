@@ -137,3 +137,4 @@ executed_notebooks/*
 
 #Playgrounds, unfinished notebooks
 ipynb/playgrounds/*
+ipynb/archive/*
