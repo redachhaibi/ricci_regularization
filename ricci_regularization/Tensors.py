@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 import functools
 
 # jacfwd
+"""
+def metric_jacfwd(u, function):
+    u = u.unsqueeze(0) # newline
+    jac = jacfwd(function)(u).squeeze().reshape(-1,u.shape[-1])
+    #jac = jacfwd(function)(u).squeeze()
+    # squeezing is needed to get rid of 1-dimentions
+    metric = torch.matmul(jac.T,jac)
+    return metric
+"""
+
 def metric_jacfwd(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
     jac = jacfwd(function)(u)
@@ -25,9 +35,11 @@ def metric_der_jacfwd (u, function):
     return dg
 metric_der_jacfwd_vmap = TF.vmap(metric_der_jacfwd)
 
-def Ch_jacfwd (u, function):
+def Ch_jacfwd (u, function, eps = 0.01):
     g = metric_jacfwd(u,function)
-    g_inv = torch.inverse(g)
+    #g_inv = torch.inverse(g)
+    d = g.shape[0]
+    g_inv = torch.inverse(g + eps*torch.eye(d))
     dg = metric_der_jacfwd(u,function)
     Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
               torch.einsum('im,mlk->ikl',g_inv,dg)-
@@ -59,21 +71,31 @@ def Ric_jacfwd(u, function):
 
 Ric_jacfwd_vmap = TF.vmap(Ric_jacfwd)
 
-def Sc_jacfwd (u, function):
+def Sc_jacfwd (u, function, eps = 0.01):
     metric = metric_jacfwd(u, function=function)
     Ricci = Ric_jacfwd(u, function=function)
-    metric_inv = torch.inverse(metric)
+    d = metric.shape[0]
+    metric_inv = torch.inverse(metric + eps * torch.eye(d))
+    #metric_inv = torch.inverse(metric)
     Sc = torch.einsum('ab,ab',metric_inv,Ricci)
     return Sc
 Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
 
 # jacrev
+def metric_jacrev(u, function):
+    jac = jacrev(function)(u).squeeze()
+    # squeezing is needed to get rid of 1-dimentions
+    metric = torch.matmul(jac.T,jac)
+    return metric
+
+"""
 def metric_jacrev(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
     jac = jacrev(function)(u)
     jac = jac.reshape(-1,latent_space_dim)
     metric = torch.matmul(jac.T,jac)
     return metric
+"""
 
 metric_jacrev_vmap = TF.vmap(metric_jacrev)
 
@@ -182,3 +204,70 @@ def my_fun_lobachevsky(u, c=0.01):
     output = torch.cat((output.unsqueeze(0),torch.zeros(781).unsqueeze(0)),dim=1)
     output = output.flatten()
     return output
+
+
+# as a class!
+class RiemannianGeometry():
+    def __init__(self, latent_space_dim, function, AD_method, eps = 0):
+        self.latent_space_dim = latent_space_dim
+        self.function = function
+        self.eps = eps
+        self.AD_method = AD_method
+    def metric(self, point):
+        #print()
+        point = point.reshape(-1,self.latent_space_dim)
+        jac = self.AD_method(self.function)(point)
+        jac = jac.reshape(-1,self.latent_space_dim)
+        metric = torch.matmul(jac.T,jac)
+        return metric
+    def metric_vmap(self,tensor):
+        return TF.vmap(self.metric)(tensor)
+    def metric_der(self, point):
+        metric = self.metric
+        dg = self.AD_method(metric)(point).squeeze()
+        # squeezing is needed to get rid of 1-dimentions 
+        # occuring when using jacfwd
+        return dg
+    def metric_der_vmap(self,tensor):
+        return TF.vmap(self.metric_der)(tensor)
+    def Ch (self, point):
+        g = self.metric(point)
+        g_inv = torch.inverse(g + self.eps*torch.eye(self.latent_space_dim))
+        dg = self.metric_der(point)
+        Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
+                torch.einsum('im,mlk->ikl',g_inv,dg)-
+                torch.einsum('im,klm->ikl',g_inv,dg)
+                )
+        return Ch
+    def Ch_vmap(self,tensor):
+        return TF.vmap(self.Ch)(tensor)
+    def Ch_der (self, point):
+        dCh = self.AD_method(self.Ch)(point).squeeze()
+        return dCh
+    def Ch_der_vmap(self,tensor):
+        return TF.vmap(self.Ch_der)(tensor)
+    # Riemann curvature tensor (3,1)
+    def Riem(self, point):
+        Ch = self.Ch(point)
+        Ch_der = self.Ch_der(point)
+
+        Riem = torch.einsum("iljk->ijkl",Ch_der) - torch.einsum("ikjl->ijkl",Ch_der)
+        Riem += torch.einsum("ikp,plj->ijkl", Ch, Ch) - torch.einsum("ilp,pkj->ijkl", Ch, Ch)
+        return Riem
+
+    def Ric(self, point):
+        Riemann = self.Riem(point)
+        Ric = torch.einsum("cacb->ab",Riemann)
+        return Ric
+    def Ric_vmap(self,tensor):
+        return TF.vmap(self.Ric)(tensor)
+
+    def Sc (self, point):
+        metric = self.metric(point)
+        Ricci = self.Ric(point)
+        metric_inv = torch.inverse(metric + self.eps * torch.eye(self.latent_space_dim))
+        Sc = torch.einsum('ab,ab',metric_inv,Ricci)
+        return Sc
+    def Sc_vmap(self,tensor):
+        return TF.vmap(self.Sc)(tensor)
+    
