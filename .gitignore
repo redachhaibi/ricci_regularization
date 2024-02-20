@@ -127,6 +127,7 @@ plots/*
 #Datasets
 ipynb/demos/data/*
 ipynb/dataset/*
+datasets/*
 
 #nn weights
 nn_weights/*
