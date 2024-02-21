@@ -80,3 +80,58 @@ def draw_scalar_on_grid(scalar_on_grid,plot_name="my_plot",
     fig.tight_layout()
     plt.show()
     return plt
+
+
+# plot recostructions for mnist dataset
+def plot_ae_outputs(test_dataset,encoder,decoder,n=10,D=784):
+    plt.figure(figsize=(16,4.5))
+    targets = test_dataset.targets.numpy()
+    t_idx = {i:np.where(targets==i)[0][0] for i in range(n)}
+    for i in range(n):
+      ax = plt.subplot(2,n,i+1)
+      img = test_dataset[t_idx[i]][0].unsqueeze(0)
+      #encoder.eval()
+      #decoder.eval()
+      with torch.no_grad():
+         #rec_img  = decoder(encoder(img))
+         rec_img  = decoder(encoder(img.reshape(1,D))).reshape(1,28,28)
+      plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
+      ax.get_xaxis().set_visible(False)
+      ax.get_yaxis().set_visible(False)  
+      if i == n//2:
+        ax.set_title('Original images')
+      ax = plt.subplot(2, n, i + 1 + n)
+      plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')  
+      ax.get_xaxis().set_visible(False)
+      ax.get_yaxis().set_visible(False)  
+      if i == n//2:
+         ax.set_title('Reconstructed images')
+    plt.show()   
+# borrowed from https://gist.github.com/jakevdp/91077b0cae40f8f8244a
+def discrete_cmap(N, base_cmap=None):
+    """Create an N-bin discrete colormap from the specified input map"""
+
+    # Note that if base_cmap is a string or None, you can simply do
+    #    return plt.cm.get_cmap(base_cmap, N)
+    # The following works for string, None, or a colormap instance:
+
+    base = plt.cm.get_cmap(base_cmap)
+    color_list = base(np.linspace(0, 1, N))
+    cmap_name = base.name + str(N)
+    return base.from_list(cmap_name, color_list, N)
+def plot3losses(mse_train_list,uniform_train_list,curv_train_list):
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6,18))
+    
+    axes[0].semilogy(mse_train_list, color = 'tab:red')
+    axes[0].set_ylabel('MSE')
+    
+    axes[1].semilogy(uniform_train_list, color = 'tab:olive')
+    axes[1].set_ylabel('Uniform loss')
+    
+    axes[2].semilogy(curv_train_list, color = 'tab:blue')
+    axes[2].set_ylabel('Curvature')
+    for i in range(3):
+        axes[i].set_xlabel('Batches')
+    #fig.show()
+    plt.show()
+    return fig,axes

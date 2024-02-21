@@ -4,7 +4,8 @@ import torch.nn as nn
 class TorusAE(nn.Module):
     def __init__(self, x_dim, h_dim1, h_dim2, z_dim):
         super(TorusAE, self).__init__()
-        self.Z_DIM = z_dim
+        self.x_dim = x_dim
+        self.z_dim = z_dim
         # Non-linearity
         self.non_linearity = torch.sin
         self.non_linearity2 = torch.cos # should this not be vice versa??
@@ -52,14 +53,16 @@ class TorusAE(nn.Module):
         h = z
         h = self.non_linearity( self.fc4(h))
         h = self.non_linearity( self.fc5(h))
-        return self.non_linearity( self.fc6(h) )
+        return self.fc6(h)
+        #return self.non_linearity( self.fc6(h) )
     def decoder_torus(self, z):
         h = z
         h = torch.cat( (self.non_linearity2(h), self.non_linearity(h)), 1)
         h = self.non_linearity( self.fc4(h))
         h = self.non_linearity( self.fc5(h))
-        return self.non_linearity( self.fc6(h) )
+        return self.fc6(h)
+        #return self.non_linearity( self.fc6(h) )
     
     def forward(self, x):
-        z = self.encoder(x.view(-1, D))
+        z = self.encoder(x.view(-1, self.x_dim))
         return self.decoder(z), z
