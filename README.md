@@ -57,7 +57,7 @@ python -m ipykernel install --user --name=.venv_ricci
 
 7. Additionnal packages which could me removed in ulterior versions
 ```bash
-pip install numpy torch torchvision umap-learn pypdf pdfkit
+pip install numpy torch torchvision umap-learn pypdf pdfkit jupyter
 ```
 
 ## Configuration
