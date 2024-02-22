@@ -97,6 +97,7 @@ celerybeat.pid
 .env
 .venv
 .venv_ricci
+.venv_ricci2024
 env/
 venv/
 ENV/
