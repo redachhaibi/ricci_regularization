@@ -25,24 +25,10 @@
         "weight_decay": 0.0,
         "random_seed": 0
     },
-    "OOD_parameters": {
-        "OOD_regime": false,
-        "start_ood": 100,
-        "T_ood": 20,
-        "n_ood": 5,
-        "sigma_ood": 0.2,
-        "N_extr": 16,
-        "r_ood": 0.001,
-        "OOD_w": 0.0
-    },
     "training_results": {
         "R^2": 0.9861456155776978,
         "mse_loss": 0.8807322382926941,
         "unif_loss": 0.20727010071277618,
         "curv_loss": 350.6560974121094
-    },
-    "Path_pictures": "../experiments/Swissroll_torus_AE/experiment0",
-    "Path_weights": "../nn_weights/",
-    "Path_experiments": "../experiments/",
-    "weights_file": "../nn_weights/Swissroll_exp0.pt"
+    }
 }
