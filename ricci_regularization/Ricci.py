@@ -82,6 +82,7 @@ def Sc_jacfwd (u, function, eps = 0.01):
 Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
 
 # jacrev
+"""
 def metric_jacrev(u, function):
     jac = jacrev(function)(u).squeeze()
     # squeezing is needed to get rid of 1-dimentions
@@ -95,7 +96,7 @@ def metric_jacrev(u, function, latent_space_dim=2):
     jac = jac.reshape(-1,latent_space_dim)
     metric = torch.matmul(jac.T,jac)
     return metric
-"""
+
 
 metric_jacrev_vmap = TF.vmap(metric_jacrev)
 

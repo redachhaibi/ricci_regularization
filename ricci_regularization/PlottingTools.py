@@ -243,6 +243,7 @@ def plotsmart(dictplots):
     plt.show()
     return fig,axes
 
+
 def translate_dict(dict2print):
     dictplots = {
     "plot1": {
