@@ -238,13 +238,13 @@ def plotsmart(dictplots):
         #end for
         axes[i].set_ylabel(plot_info["yname_latex"])
         axes[i].set_xlabel('Batches')
-        axes[i].legend(loc="upper right")
+        axes[i].legend(loc="lower left")
         i += 1
     plt.show()
     return fig,axes
 
 
-def translate_dict(dict2print):
+def translate_dict(dict2print, include_curvature_plots = True):
     dictplots = {
     "plot1": {
         "yname_latex": "MSE",
@@ -257,20 +257,23 @@ def translate_dict(dict2print):
         "data": {
             "$\widehat\mathcal{L}_\mathrm{unif}$": dict2print["uniform_loss"]
         }
-    },
-    "plot3": {
-        "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
-        "data": {
-            "$\widehat\mathcal{L}_\mathrm{curv}$": dict2print["curvature_loss"]
+    }
+    }
+    if include_curvature_plots == True:
+        dictplots["plot3"] = {
+            "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
+            "data": {
+                "$\widehat\mathcal{L}_\mathrm{curv}$": dict2print["curvature_loss"]
+            }
         }
-    },
-    "plot4": {
-        "yname_latex": "$R^2$",
-        "data": {
-            "mean": dict2print["curv_squared_mean"],
-            "max": dict2print["curv_squared_max"]
+        dictplots["plot4"] = {
+            "yname_latex": "$R^2$",
+            "data": {
+                "mean": dict2print["curv_squared_mean"],
+                "max": dict2print["curv_squared_max"]
+            }
         }
-    },
+    dict2 = {
 
     "plot5": {
         "yname_latex": "$\det(g)$",
@@ -281,7 +284,7 @@ def translate_dict(dict2print):
     },
 
     "plot6": {
-        "yname_latex": "$\|g^{-1}\|_F$",
+        "yname_latex": "$\|g_{reg}^{-1}\|_F$",
         "data": {
             "mean": dict2print["g_inv_norm_mean"],
             "max": dict2print["g_inv_norm_max"]
@@ -289,12 +292,48 @@ def translate_dict(dict2print):
     },
 
     "plot7": {
-        "yname_latex": f"$\|\mathrm{{grad}} \Phi \|^2_F$",
+        "yname_latex": r"$\|\nabla \Psi \|^2_F = \mathrm{tr} (g) $",
         "data": {
-            "mean": dict2print["encoder_grad_norm_mean"],
-            "max": dict2print["encoder_grad_norm_max"]
+            "mean": dict2print["decoder_jac_norm_mean"],
+            "max": dict2print["decoder_jac_norm_max"]
         }
     }
-
     }
+    
+    dictplots = {**dictplots,**dict2}
     return dictplots
+
+def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
+    number_of_plots = len(dictplots)
+    fig, axes = plt.subplots(nrows=number_of_plots, ncols=3, figsize=(4*3, number_of_plots*4))
+    
+    win = [signal.windows.hann(1), signal.windows.hann(numwindows1), signal.windows.hann(numwindows2)]  # convolution window size
+    i = 0
+    color_iterable = iter(mcolors.TABLEAU_COLORS)
+    for plot_name,plot_info in dictplots.items():
+        #if number_of_plots == 1:
+        #    axes = [axes]
+        
+        for legend, curve in plot_info["data"].items(): 
+            try:
+                newcolor = next(color_iterable)
+            except StopIteration:
+                color_iterable = iter(mcolors.TABLEAU_COLORS)
+                newcolor = next(color_iterable)
+            #end except
+                
+            if legend=="max":
+                linestyle = 'dashed'
+            else:
+                linestyle = 'solid'
+            for j in range(3):
+                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='same') / sum(win[j]), color = newcolor,label = legend,ls = linestyle)
+                #axes[i,j].semilogy(curve, color = newcolor,label = legend,ls = linestyle)
+                axes[i,j].set_xlabel('Batches')
+            #end for
+        #end for
+        axes[i,0].set_ylabel(plot_info["yname_latex"])
+        axes[i,0].legend(loc="lower left")
+        i += 1
+    plt.show()
+    return fig,axes
