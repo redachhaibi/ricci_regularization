@@ -230,7 +230,7 @@ def plotsmart(dictplots):
                 newcolor = next(color_iterable)
             #end except
                 
-            if legend=="max":
+            if (legend=="max")|(legend=="min"):
                 linestyle = 'dashed'
             else:
                 linestyle = 'solid'
@@ -244,7 +244,7 @@ def plotsmart(dictplots):
     return fig,axes
 
 
-def translate_dict(dict2print, include_curvature_plots = True):
+def translate_dict(dict2print, include_curvature_plots = True, eps = 0):
     dictplots = {
     "plot1": {
         "yname_latex": "MSE",
@@ -279,12 +279,13 @@ def translate_dict(dict2print, include_curvature_plots = True):
         "yname_latex": "$\det(g)$",
         "data": {
             "mean": dict2print["g_det_mean"],
-            "max": dict2print["g_det_max"]
+            "max": dict2print["g_det_max"],
+            "min": dict2print["g_det_min"]
         }
     },
 
     "plot6": {
-        "yname_latex": "$\|g_{reg}^{-1}\|_F$",
+        "yname_latex": r"$\|g_{reg}^{-1}\|_F, \ \varepsilon = $" + f"{eps}",
         "data": {
             "mean": dict2print["g_inv_norm_mean"],
             "max": dict2print["g_inv_norm_max"]
@@ -296,6 +297,14 @@ def translate_dict(dict2print, include_curvature_plots = True):
         "data": {
             "mean": dict2print["decoder_jac_norm_mean"],
             "max": dict2print["decoder_jac_norm_max"]
+        }
+    },
+
+    "plot8": {
+        "yname_latex": r"$\|\nabla \Phi \|^2_F $",
+        "data": {
+            "mean": dict2print["encoder_jac_norm_mean"],
+            "max": dict2print["encoder_jac_norm_max"]
         }
     }
     }
