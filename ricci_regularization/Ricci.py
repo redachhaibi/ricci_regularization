@@ -27,6 +27,14 @@ def metric_jacfwd(u, function, latent_space_dim=2):
 
 metric_jacfwd_vmap = TF.vmap(metric_jacfwd)
 
+def metric_inv_jacfwd(u, function, eps=0.01):
+    g = metric_jacfwd(u,function)
+    d = g.shape[0]
+    g_inv = torch.inverse(g + eps*torch.eye(d))
+    return g_inv
+
+metric_inv_jacfwd_vmap = TF.vmap(metric_inv_jacfwd)
+
 def metric_der_jacfwd (u, function):
     metric = functools.partial(metric_jacfwd, function=function)
     dg = jacfwd(metric)(u).squeeze()
@@ -35,6 +43,17 @@ def metric_der_jacfwd (u, function):
     return dg
 metric_der_jacfwd_vmap = TF.vmap(metric_der_jacfwd)
 
+def Ch_jacfwd (u, function, eps = 0.01):
+    g = metric_jacfwd(u,function)
+    g_inv = metric_inv_jacfwd(u,function,eps=eps)
+    dg = metric_der_jacfwd(u,function)
+    Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
+              torch.einsum('im,mlk->ikl',g_inv,dg)-
+              torch.einsum('im,klm->ikl',g_inv,dg)
+              )
+    return Ch
+Ch_jacfwd_vmap = TF.vmap(Ch_jacfwd)
+"""
 def Ch_jacfwd (u, function, eps = 0.01):
     g = metric_jacfwd(u,function)
     #g_inv = torch.inverse(g)
@@ -47,30 +66,37 @@ def Ch_jacfwd (u, function, eps = 0.01):
               )
     return Ch
 Ch_jacfwd_vmap = TF.vmap(Ch_jacfwd)
-
-def Ch_der_jacfwd (u, function):
-    Ch = functools.partial(Ch_jacfwd, function=function)
+"""
+def Ch_der_jacfwd (u, function,eps=0.01):
+    Ch = functools.partial(Ch_jacfwd, function=function,eps=eps)
     dCh = jacfwd(Ch)(u).squeeze()
     return dCh
 
 Ch_der_jacfwd_vmap = TF.vmap(Ch_der_jacfwd)
 
 # Riemann curvature tensor (3,1)
-def Riem_jacfwd(u, function):
-    Ch = Ch_jacfwd(u, function)
-    Ch_der = Ch_der_jacfwd(u, function)
+def Riem_jacfwd(u, function,eps=0.01):
+    Ch = Ch_jacfwd(u, function,eps=eps)
+    Ch_der = Ch_der_jacfwd(u, function,eps=eps)
 
     Riem = torch.einsum("iljk->ijkl",Ch_der) - torch.einsum("ikjl->ijkl",Ch_der)
     Riem += torch.einsum("ikp,plj->ijkl", Ch, Ch) - torch.einsum("ilp,pkj->ijkl", Ch, Ch)
     return Riem
 
-def Ric_jacfwd(u, function):
-    Riemann = Riem_jacfwd(u, function)
+def Ric_jacfwd(u, function,eps=0.01):
+    Riemann = Riem_jacfwd(u, function,eps=eps)
     Ric = torch.einsum("cacb->ab",Riemann)
     return Ric
 
 Ric_jacfwd_vmap = TF.vmap(Ric_jacfwd)
 
+def Sc_jacfwd (u, function, eps = 0.01):
+    Ricci = Ric_jacfwd(u, function=function,eps=eps)
+    metric_inv = metric_inv_jacfwd(u,function=function,eps=eps)
+    Sc = torch.einsum('ab,ab',metric_inv,Ricci)
+    return Sc
+Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
+"""
 def Sc_jacfwd (u, function, eps = 0.01):
     metric = metric_jacfwd(u, function=function)
     Ricci = Ric_jacfwd(u, function=function)
@@ -80,7 +106,7 @@ def Sc_jacfwd (u, function, eps = 0.01):
     Sc = torch.einsum('ab,ab',metric_inv,Ricci)
     return Sc
 Sc_jacfwd_vmap = TF.vmap(Sc_jacfwd)
-
+"""
 # jacrev
 """
 def metric_jacrev(u, function):
