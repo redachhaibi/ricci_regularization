@@ -1,0 +1,58 @@
+{
+    "experiment_name": "Swissroll_torus_AE",
+    "experiment_number": 91,
+    "dataset": {
+        "name": "Swissroll",
+        "parameters": {
+            "sr_noise": 1e-06,
+            "sr_numpoints": 18000
+        }
+    },
+    "architecture": {
+        "input_dim": 3,
+        "latent_dim": 2
+    },
+    "optimization_parameters": {
+        "learning_rate": 0.0005,
+        "batch_size": 128,
+        "split_ratio": 0.2,
+        "num_epochs": 20,
+        "weight_decay": 0.0,
+        "random_seed": 0
+    },
+    "losses": {
+        "mse_w": 1.0,
+        "unif_w": 0.5,
+        "curv_w": 1.0000000000000013,
+        "delta_curv": 0.1,
+        "curvature_penalization_mode": "max",
+        "g_inv regularization eps": 0.1,
+        "lambda_contractive_encoder": 1.0,
+        "delta_encoder": 1.0,
+        "lambda_contractive_decoder": 0.0,
+        "delta_decoder": 2,
+        "diagnostic_mode": true,
+        "compute_curvature": true
+    },
+    "OOD_parameters": {
+        "OOD_regime": false,
+        "start_ood": 1,
+        "T_ood": 20,
+        "n_ood": 5,
+        "sigma_ood": 0.2,
+        "N_extr": 16,
+        "r_ood": 0.001,
+        "OOD_w": 0.0001
+    },
+    "training_results_on_test_data": {
+        "R^2": 0.9918504357337952,
+        "mse_loss": 0.5183310508728027,
+        "unif_loss": 0.12129397690296173,
+        "curv_loss": 3.275296688079834,
+        "decoder_penalty": 661.114501953125
+    },
+    "Path_pictures": "../experiments/Swissroll_torus_AE/experiment91",
+    "Path_weights": "../nn_weights/",
+    "Path_experiments": "../experiments/",
+    "weights_saved_at": "../nn_weights/Swissroll_exp91.pt"
+}

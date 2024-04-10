@@ -1,6 +1,6 @@
 {
     "experiment_name": "Swissroll_torus_AE",
-    "experiment_number": 0,
+    "experiment_number": 8,
     "dataset": {
         "name": "Swissroll",
         "parameters": {
@@ -25,10 +25,24 @@
         "weight_decay": 0.0,
         "random_seed": 0
     },
+    "OOD_parameters": {
+        "OOD_regime": false,
+        "start_ood": 450,
+        "T_ood": 20,
+        "n_ood": 5,
+        "sigma_ood": 0.2,
+        "N_extr": 16,
+        "r_ood": 0.001,
+        "OOD_w": 0.0
+    },
     "training_results": {
-        "R^2": 0.9861456155776978,
-        "mse_loss": 0.8807322382926941,
-        "unif_loss": 0.20727010071277618,
-        "curv_loss": 350.6560974121094
-    }
+        "R^2": 0.9855592846870422,
+        "mse_loss": 0.9184640049934387,
+        "unif_loss": 0.2866308391094208,
+        "curv_loss": 263.7819519042969
+    },
+    "Path_pictures": "../experiments/Swissroll_torus_AE/experiment8",
+    "Path_weights": "../nn_weights/",
+    "Path_experiments": "../experiments/",
+    "weights_file": "../nn_weights/Swissroll_exp8.pt"
 }

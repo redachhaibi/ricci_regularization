@@ -1,0 +1,33 @@
+{
+    "experiment_name": "MNIST_torus_AE",
+    "experiment_number": 0,
+    "dataset": {
+        "name": "MNIST",
+        "D": 784,
+        "split_ratio": 0.2
+    },
+    "architecture": {
+        "latent_dim": 2
+    },
+    "optimization_parameters": {
+        "learning_rate": 0.001,
+        "momentum": 0.8,
+        "batch_size": 64,
+        "num_epochs": 10,
+        "mse_w": 10.0,
+        "unif_w": 0,
+        "curv_w": 0,
+        "compute_curvature": false,
+        "weight_decay": 0.0,
+        "random_seed": 0
+    },
+    "training_results": {
+        "R^2": 0.5804513692855835,
+        "mse_loss": 0.039638858288526535,
+        "unif_loss": 0.20490190386772156,
+        "curv_loss": 0.27199217677116394
+    },
+    "Path_pictures": "../experiments/MNIST_torus_AE/experiment0",
+    "Path_weights": "../nn_weights/",
+    "Path_experiments": "../experiments/"
+}

@@ -1,0 +1,58 @@
+{
+    "experiment_name": "MNIST_torus_AE",
+    "experiment_number": 5,
+    "dataset": {
+        "name": "MNIST",
+        "parameters": {
+            "k": 10
+        }
+    },
+    "architecture": {
+        "name": "TorusAE",
+        "input_dim": 784,
+        "latent_dim": 2
+    },
+    "optimization_parameters": {
+        "learning_rate": 0.001,
+        "batch_size": 256,
+        "split_ratio": 0.2,
+        "num_epochs": 50,
+        "weight_decay": 0.0,
+        "random_seed": 0
+    },
+    "losses": {
+        "mse_w": 1.0,
+        "unif_w": 0.001,
+        "curv_w": 0.0,
+        "delta_curv": 0.1,
+        "curvature_penalization_mode": "max",
+        "g_inv regularization eps": 0.1,
+        "lambda_contractive_encoder": 0.0,
+        "delta_encoder": 20.0,
+        "lambda_contractive_decoder": 0.0,
+        "delta_decoder": 2,
+        "diagnostic_mode": false,
+        "compute_curvature": false
+    },
+    "OOD_parameters": {
+        "OOD_regime": false,
+        "start_ood": 1,
+        "T_ood": 20,
+        "n_ood": 5,
+        "sigma_ood": 0.2,
+        "N_extr": 16,
+        "r_ood": 0.001,
+        "OOD_w": 0.0
+    },
+    "training_results_on_test_data": {
+        "R^2": 0.5801659226417542,
+        "mse_loss": 0.0396658293902874,
+        "unif_loss": 0.0462082102894783,
+        "curv_loss": 81.78251647949219,
+        "decoder_penalty": 279.34625244140625
+    },
+    "Path_pictures": "../experiments/MNIST_torus_AE/experiment5",
+    "Path_weights": "../nn_weights/",
+    "Path_experiments": "../experiments/",
+    "weights_saved_at": "../nn_weights/MNIST_exp5.pt"
+}
