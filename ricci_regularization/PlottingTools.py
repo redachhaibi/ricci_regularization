@@ -84,7 +84,7 @@ def draw_scalar_on_grid(scalar_on_grid,plot_name="my_plot",
 
 # plot recostructions for mnist dataset
 def plot_ae_outputs(test_dataset,encoder,decoder,n=10,D=784):
-    plt.figure(figsize=(16,4.5))
+    plt.figure(figsize=(16*n/10,4.5))
     targets = test_dataset.targets.numpy()
     t_idx = {i:np.where(targets==i)[0][0] for i in range(n)}
     for i in range(n):
