@@ -57,7 +57,7 @@ class TorusAE(nn.Module):
         #return self.non_linearity( self.fc6(h) )
     def decoder_torus(self, z):
         h = z
-        h = torch.cat( (self.non_linearity2(h), self.non_linearity(h)), 1)
+        h = torch.cat( (self.non_linearity2(h), self.non_linearity(h)), -1)
         h = self.non_linearity( self.fc4(h))
         h = self.non_linearity( self.fc5(h))
         return self.fc6(h)
