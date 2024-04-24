@@ -199,19 +199,29 @@ def my_fun_polinomial(u):
 #        -> 784 dim in total
 # u = (\theta, \phi)
 # ds^2 = (d\theta)^2 + sin^2(\theta)*(d\phi)^2
-def my_fun_sphere(u):
-    u = u.flatten()
-    
-    x = torch.sin(u[0])*torch.cos(u[1])
-    y = torch.sin(u[0])*torch.sin(u[1])
-    z = torch.cos(u[0])
+def my_fun_sphere(u,D=3):
+    #u = u.flatten()
+    ushape = u.shape
+    u = u.reshape(-1,2)
+    x = torch.sin(u[:,0])*torch.cos(u[:,1])
+    y = torch.sin(u[:,0])*torch.sin(u[:,1])
+    z = torch.cos(u[:,0])
 
-    x = x.unsqueeze(0)
-    y = y.unsqueeze(0)
-    z = z.unsqueeze(0)
+    output = torch.stack((x, y, z),dim=-1)
+    output = output.reshape((*ushape[:-1],3))
+    """
+    x = torch.sin(u[:,0])*torch.cos(u[:,1])
+    y = torch.sin(u[:,0])*torch.sin(u[:,1])
+    z = torch.cos(u[:,0])
+
+    x = x.unsqueeze(1)
+    y = y.unsqueeze(1)
+    z = z.unsqueeze(1)
     output = torch.cat((x, y, z),dim=-1)
-    output = torch.cat((output.unsqueeze(0),torch.zeros(781).unsqueeze(0)),dim=1)
-    output = output.flatten()
+    """
+    if D>3:
+        output = torch.cat((output.unsqueeze(0),torch.zeros(D-3).unsqueeze(0)),dim=1)
+    #output = output.flatten()
     return output
 
 # Hyperbolic plane embedding
