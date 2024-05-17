@@ -203,9 +203,9 @@ def my_fun_sphere(u,D=3):
     #u = u.flatten()
     ushape = u.shape
     u = u.reshape(-1,2)
-    x = torch.sin(u[:,0])*torch.cos(u[:,1])
-    y = torch.sin(u[:,0])*torch.sin(u[:,1])
-    z = torch.cos(u[:,0])
+    x = torch.cos(u[:,0])*torch.cos(u[:,1])
+    y = torch.cos(u[:,0])*torch.sin(u[:,1])
+    z = torch.sin(u[:,0])
 
     output = torch.stack((x, y, z),dim=-1)
     output = output.reshape((*ushape[:-1],3))

@@ -5,7 +5,7 @@ from torch.utils.data import Subset
 from torchvision import datasets, transforms
 import sklearn
 
-def get_dataloaders_tuned_nn(Path_experiment_json:str):
+def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     # Loading JSON file
 
     with open(Path_experiment_json) as json_file:
@@ -33,8 +33,12 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str):
         D = 784
         full_mnist_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
         test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
-        indices01 = torch.where((full_mnist_dataset.targets == 0) | (full_mnist_dataset.targets == 1))[0]
-        
+        #indices01 = torch.where((full_mnist_dataset.targets == 0) | (full_mnist_dataset.targets == 1))[0]
+        mask = (full_mnist_dataset.targets == -1) 
+        selected_labels = json_config["dataset"]["selected_labels"]
+        for label in selected_labels:
+            mask = mask | (full_mnist_dataset.targets == label)
+        indices01 = torch.where(mask)[0]
         train_dataset = Subset(full_mnist_dataset, indices01) # MNIST only with 0,1 indices
 
     elif set_name == "Synthetic":
@@ -65,7 +69,7 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str):
         train_dataset = TensorDataset(sr_points,sr_colors)
 
     m = len(train_dataset)
-    train_data, test_data = torch.utils.data.random_split(train_dataset, [int(m-m*split_ratio), int(m*split_ratio)])
+    train_data, test_data = torch.utils.data.random_split(train_dataset, [m-int(m*split_ratio), int(m*split_ratio)])
 
     test_loader  = torch.utils.data.DataLoader(test_data , batch_size=batch_size)
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
@@ -81,13 +85,15 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str):
     if torch.cuda.is_available():
         torus_ae.cuda()
 
-    PATH_ae_wights = "../" + json_config["weights_saved_at"]
+    #PATH_ae_wights = "../" + json_config["weights_saved_at"]
+    PATH_ae_wights = additional_path + json_config["weights_saved_at"]
     torus_ae.load_state_dict(torch.load(PATH_ae_wights))
     torus_ae.eval()
     
     dict = {
         "train_loader" : train_loader,
-        "test_loader" : train_loader,
-        "tuned_neural_network": torus_ae
+        "test_loader" : test_loader,
+        "tuned_neural_network": torus_ae,
+        "json_config" : json_config
     }
     return dict
