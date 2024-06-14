@@ -2,12 +2,13 @@ import torch
 import math
 import ricci_regularization
 def curv_loss_on_OOD_samples(extreme_curv_points_tensor, decoder, sigma_ood,n_ood, N_extr,latent_space_dim):
+    device = extreme_curv_points_tensor.device
     with torch.no_grad():
         centers = extreme_curv_points_tensor.repeat_interleave(n_ood,dim=0)
-        samples_centered_at_zero = (sigma_ood**2)*torch.randn(N_extr*n_ood, latent_space_dim)
+        centers = centers.to(device)
+        samples_centered_at_zero = (sigma_ood**2)*torch.randn(N_extr*n_ood, latent_space_dim, device=device)
         OOD_batch = centers + samples_centered_at_zero
     OOD_batch.requires_grad_()
-    
     # OOD loss function
     metric_on_OOD = ricci_regularization.metric_jacfwd_vmap(OOD_batch,
                                            function=decoder)
