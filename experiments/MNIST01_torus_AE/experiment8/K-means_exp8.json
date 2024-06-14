@@ -1,0 +1,10 @@
+{
+    "curv_w": 0.1,
+    "labels": [
+        5,
+        8
+    ],
+    "F-score Euclidean k-means in latent space vs ground truth": 0.8006617038875103,
+    "F-score Euclidean k-means in reconstructed data space vs ground truth": 0.8586744639376218,
+    "F-score Euclidean k-means in input data space vs ground truth": 0.5704944830404577
+}
