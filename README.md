@@ -55,9 +55,9 @@ python -m ipykernel install --user --name=.venv_ricci
 ```
 (see https://janakiev.com/blog/jupyter-virtual-envs/ for details)
 
-7. Additionnal packages which could me removed in ulterior versions
+7. Additionnal packages which could be removed in ulterior versions
 ```bash
-pip install numpy torch torchvision umap-learn pypdf pdfkit jupyter
+pip install numpy torch torchvision umap-learn pypdf pdfkit jupyter stochman geomstats
 ```
 
 ## Configuration
