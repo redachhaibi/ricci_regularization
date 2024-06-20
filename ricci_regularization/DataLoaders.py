@@ -6,7 +6,17 @@ from torchvision import datasets, transforms
 import sklearn
 
 def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
-    # Loading JSON file
+    """
+    Loads dataset, splits it into training and testing sets, creates DataLoaders, sets up a VAE architecture, 
+    loads pre-trained weights, and returns a dictionary containing the DataLoaders, the tuned VAE, and the configuration.
+
+    Parameters:
+    Path_experiment_json (str): Path to the JSON configuration file.
+    additional_path (str, optional): Additional path to the pre-trained weights.
+
+    Returns:
+    dict: A dictionary with the training DataLoader, testing DataLoader, the tuned AE model, and the configuration.
+    """
 
     with open(Path_experiment_json) as json_file:
         json_config = json.load(json_file)
