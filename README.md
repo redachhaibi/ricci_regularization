@@ -9,10 +9,21 @@ The repository is structured as follows. We only describe the most important fil
 ```bash
 ./
 |-- ricci_regularization_ Core of package. 
-|  |-- ???.py        : TODO
-|-- ipynb: Contains Python notebooks which demonstrate how the code works
-|  |-- ???.ipynb: TODO
-|-- tests: Unit tests
+|  |-- Architectures.py : Choice of AE architectures: TorusAE, TorusConvAE, etc.
+|  |-- DataLoaders.py : Dataset loading and neural net weights loading.
+|  |-- OODTools.py : functions for OOD sampling
+|  |-- Ricci.py : Computing all useful Riemannian geometry tensors
+|  |-- SyntheticGaussians.py : Creating the Synthetic Gaussians dataset
+
+|-- ipynb: Contains Python notebooks which demonstrate how the code works. Most important files:
+|-- AE_torus_training.ipynb: training of the AE 
+|-- AE_torus_report.ipynb: building the report
+|-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ration benchmark 
+|-- torus3dembedding.ipynb: 3D Torus embedding
+|-- K-means.ipynb: Benchmark of K-means clustering performance
+
+
+|-- tests: TODO
 |-- README.md: This file
 ```
 
