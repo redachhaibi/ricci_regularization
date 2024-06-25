@@ -18,7 +18,7 @@ The repository is structured as follows. We only describe the most important fil
 |-- ipynb: Contains Python notebooks which demonstrate how the code works. Most important files:
 |-- AE_torus_training.ipynb: training of the AE 
 |-- AE_torus_report.ipynb: building the report
-|-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ration benchmark 
+|-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ratio benchmark 
 |-- torus3dembedding.ipynb: 3D Torus embedding
 |-- K-means.ipynb: Benchmark of K-means clustering performance
 
@@ -35,7 +35,7 @@ Step 2:
 Make a report of training. Launch ipynb/AE_torus_report.ipynb.
 
 Step 3:
-Check the geodesics in the latent space. Launch ipynb/Geodesic_benchmark.ipynb: the Grid of geodesics and length ration benchmark
+Check the geodesics in the latent space. Launch ipynb/Geodesic_benchmark.ipynb.
 
 Step 4:
 Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/torus3dembedding.ipynb.
