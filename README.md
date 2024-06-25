@@ -15,9 +15,18 @@ The repository is structured as follows. We only describe the most important fil
 |  |-- Ricci.py : Computing all useful Riemannian geometry tensors
 |  |-- SyntheticGaussians.py : Creating the Synthetic Gaussians dataset
 
-|-- ipynb: Contains Python notebooks which demonstrate how the code works. 
+|-- ipynb: Contains Python notebooks which demonstrate how the code works. Most important files:
+|-- AE_torus_training.ipynb: training of the AE 
+|-- AE_torus_report.ipynb: building the report
+|-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ration benchmark 
+|-- torus3dembedding.ipynb: 3D Torus embedding
+|-- K-means.ipynb: Benchmark of K-means clustering performance
 
-A quick start:
+|-- tests: TODO
+|-- README.md: This file
+```
+
+## A quick start:
 
 Step 1:
 Train the neural net with curvature regularization by launching ipynb/AE_torus_training.ipynb. Save weights.
@@ -33,11 +42,6 @@ Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/toru
 
 Step 5:
 Check clusterization results with K-means. Launch ipynb/K-means.ipynb.
-
-
-|-- tests: TODO
-|-- README.md: This file
-```
 
 ## Installation
 
