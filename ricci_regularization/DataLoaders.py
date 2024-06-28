@@ -86,8 +86,10 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     # VAE structure
     latent_dim = json_config["architecture"]["latent_dim"]
     input_dim  = json_config["architecture"]["input_dim"]
-    architecture_type = json_config["architecture"]["name"]
-
+    try:
+        architecture_type = json_config["architecture"]["name"]
+    except KeyError:
+        architecture_type = "TorusAE"
     if architecture_type== "TorusAE":
         torus_ae   = ricci_regularization.Architectures.TorusAE(x_dim=input_dim, h_dim1= 512, h_dim2=256, z_dim=latent_dim)
     elif architecture_type =="TorusConvAE":
@@ -96,7 +98,10 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
         torus_ae.cuda()
 
     #PATH_ae_wights = "../" + json_config["weights_saved_at"]
-    PATH_ae_wights = additional_path + json_config["weights_saved_at"]
+    try:
+        PATH_ae_wights = additional_path + json_config["weights_saved_at"]
+    except KeyError:
+        PATH_ae_wights = additional_path + json_config["weights_file"]
     torus_ae.load_state_dict(torch.load(PATH_ae_wights))
     torus_ae.eval()
     
