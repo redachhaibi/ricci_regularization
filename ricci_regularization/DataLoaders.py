@@ -25,7 +25,7 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     experiment_name = json_config["experiment_name"]
     experiment_number = json_config["experiment_number"]
     Path_pictures = json_config["Path_pictures"]
-    set_name    = json_config["dataset"]["name"]
+    dataset_name    = json_config["dataset"]["name"]
     split_ratio = json_config["optimization_parameters"]["split_ratio"]
     batch_size  = json_config["optimization_parameters"]["batch_size"]
     datasets_root = '../../datasets/'
@@ -33,13 +33,13 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     # import sys
     # sys.path.append('../') # have to go 1 level up
     import ricci_regularization
-    if set_name == "MNIST":
+    if dataset_name == "MNIST":
         #MNIST_SIZE = 28
         # MNIST Dataset
         D = 784
         train_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
         test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
-    elif set_name == "MNIST01":
+    elif dataset_name == "MNIST01":
         D = 784
         full_mnist_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
         test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
@@ -51,7 +51,7 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
         indices01 = torch.where(mask)[0]
         train_dataset = Subset(full_mnist_dataset, indices01) # MNIST only with 0,1 indices
 
-    elif set_name == "Synthetic":
+    elif dataset_name == "Synthetic":
         k = json_config["dataset"]["parameters"]["k"]
         n = json_config["dataset"]["parameters"]["n"]
         d = json_config["architecture"]["latent_dim"]
@@ -66,7 +66,7 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
                                             shift_class=shift_class, intercl_var=intercl_var, var_class=var_class)
 
         train_dataset = my_dataset.create
-    elif set_name == "Swissroll":
+    elif dataset_name == "Swissroll":
         sr_noise = json_config["dataset"]["parameters"]["sr_noise"]
         sr_numpoints = json_config["dataset"]["parameters"]["sr_numpoints"]
 
