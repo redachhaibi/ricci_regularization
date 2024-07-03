@@ -1,13 +1,12 @@
 import torch
-from functorch import jacrev,jacfwd
 import functools
 
-# jacfwd
+# Forward mode propagation via jacfwd
 """
 def metric_jacfwd(u, function):
     u = u.unsqueeze(0) # newline
-    jac = jacfwd(function)(u).squeeze().reshape(-1,u.shape[-1])
-    #jac = jacfwd(function)(u).squeeze()
+    jac = torch.func.jacfwd(function)(u).squeeze().reshape(-1,u.shape[-1])
+    #jac = torch.func.jacfwd(function)(u).squeeze()
     # squeezing is needed to get rid of 1-dimentions
     metric = torch.matmul(jac.T,jac)
     return metric
@@ -15,7 +14,7 @@ def metric_jacfwd(u, function):
 
 def metric_jacfwd(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
-    jac = jacfwd(function)(u)
+    jac = torch.func.jacfwd(function)(u)
     jac = jac.reshape(-1,latent_space_dim)
     metric = torch.matmul(jac.T,jac)
     return metric
@@ -33,9 +32,9 @@ metric_inv_jacfwd_vmap = torch.func.vmap(metric_inv_jacfwd)
 
 def metric_der_jacfwd (u, function):
     metric = functools.partial(metric_jacfwd, function=function)
-    dg = jacfwd(metric)(u).squeeze()
+    dg = torch.func.jacfwd(metric)(u).squeeze()
     # squeezing is needed to get rid of 1-dimentions 
-    # occuring when using jacfwd
+    # occuring when using torch.func.jacfwd
     return dg
 metric_der_jacfwd_vmap = torch.func.vmap(metric_der_jacfwd)
 
@@ -65,7 +64,7 @@ Ch_jacfwd_vmap = torch.func.vmap(Ch_jacfwd)
 """
 def Ch_der_jacfwd (u, function, eps=0.0):
     Ch = functools.partial(Ch_jacfwd, function=function,eps=eps)
-    dCh = jacfwd(Ch)(u).squeeze()
+    dCh = torch.func.jacfwd(Ch)(u).squeeze()
     return dCh
 
 Ch_der_jacfwd_vmap = torch.func.vmap(Ch_der_jacfwd)
@@ -103,10 +102,11 @@ def Sc_jacfwd (u, function, eps = 0.0):
     return Sc
 Sc_jacfwd_vmap = torch.func.vmap(Sc_jacfwd)
 """
-# jacrev
+
+# Bacward mode propagation via torch.func.jacrev
 """
 def metric_jacrev(u, function):
-    jac = jacrev(function)(u).squeeze()
+    jac = torch.func.jacrev(function)(u).squeeze()
     # squeezing is needed to get rid of 1-dimentions
     metric = torch.matmul(jac.T,jac)
     return metric
@@ -114,7 +114,7 @@ def metric_jacrev(u, function):
 """
 def metric_jacrev(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
-    jac = jacrev(function)(u)
+    jac = torch.func.jacrev(function)(u)
     jac = jac.reshape(-1,latent_space_dim)
     metric = torch.matmul(jac.T,jac)
     return metric
@@ -124,9 +124,9 @@ metric_jacrev_vmap = torch.func.vmap(metric_jacrev)
 
 def metric_der_jacrev (u, function):
     metric = functools.partial(metric_jacrev, function=function)
-    dg = jacrev(metric)(u).squeeze()
+    dg = torch.func.jacrev(metric)(u).squeeze()
     # squeezing is needed to get rid of 1-dimentions 
-    # occuring when using jacrev
+    # occuring when using torch.func.jacrev
     return dg
 metric_der_jacrev_vmap = torch.func.vmap(metric_der_jacrev)
 
@@ -143,7 +143,7 @@ Ch_jacrev_vmap = torch.func.vmap(Ch_jacrev)
 
 def Ch_der_jacrev (u, function):
     Ch = functools.partial(Ch_jacrev, function=function)
-    dCh = jacrev(Ch)(u).squeeze()
+    dCh = torch.func.jacrev(Ch)(u).squeeze()
     return dCh
 
 Ch_der_jacrev_vmap = torch.func.vmap(Ch_der_jacrev)
@@ -259,7 +259,7 @@ class RiemannianGeometry():
         metric = self.metric
         dg = self.AD_method(metric)(point).squeeze()
         # squeezing is needed to get rid of 1-dimentions 
-        # occuring when using jacfwd
+        # occuring when using torch.func.jacfwd
         return dg
     def metric_der_vmap(self,tensor):
         return torch.func.vmap(self.metric_der)(tensor)
