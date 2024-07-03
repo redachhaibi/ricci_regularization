@@ -1,6 +1,6 @@
 # Metric Regularization of Latent Spaces via Ricci-type gradient-flows
 
-This package is work in progress in the context of Alexei Lazarev's phD thesis.
+This package is work in progress in the context of Alexey Lazarev's PhD thesis.
 The goal is to study numerical methods for metric regularization.
 
 ## Content
@@ -16,11 +16,11 @@ The repository is structured as follows. We only describe the most important fil
 |  |-- SyntheticGaussians.py : Creating the Synthetic Gaussians dataset
 
 |-- ipynb: Contains Python notebooks which demonstrate how the code works. Most important files:
-|-- AE_torus_training.ipynb: training of the AE 
-|-- AE_torus_report.ipynb: building the report
-|-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ratio benchmark 
-|-- torus3dembedding.ipynb: 3D Torus embedding
-|-- K-means.ipynb: Benchmark of K-means clustering performance
+|  |-- AE_torus_training.ipynb: training of the AE 
+|  |-- AE_torus_report.ipynb: building the report
+|  |-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ratio benchmark 
+|  |-- torus3dembedding.ipynb: 3D Torus embedding
+|  |-- K-means.ipynb: Benchmark of K-means clustering performance
 
 |-- tests: TODO
 |-- README.md: This file
@@ -32,7 +32,7 @@ Step 1:
 Train the neural net with curvature regularization by launching ipynb/AE_torus_training.ipynb. Save weights.
 
 Step 2:
-Make a report of training. Launch ipynb/AE_torus_report.ipynb.
+Generate and visualize the report of the training. Launch ipynb/AE_torus_report.ipynb.
 
 Step 3:
 Check the geodesics in the latent space. Launch ipynb/Geodesic_benchmark.ipynb.
@@ -41,7 +41,7 @@ Step 4:
 Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/torus3dembedding.ipynb.
 
 Step 5:
-Check clusterization results with K-means. Launch ipynb/K-means.ipynb.
+Check clustering results with K-means. Launch ipynb/K-means.ipynb.
 
 ## Installation
 

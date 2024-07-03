@@ -1,6 +1,6 @@
 {
     "experiment_name": "MNIST_torus_AE",
-    "experiment_number": 27,
+    "experiment_number": 34,
     "dataset": {
         "name": "MNIST",
         "parameters": {
@@ -19,18 +19,19 @@
         "num_epochs": 40,
         "weight_decay": 0.0,
         "random_shuffling": false,
-        "random_seed": 0
+        "random_seed": 0,
+        "device": "cuda"
     },
     "losses": {
         "mse_w": 1.0,
-        "unif_w": 0.0,
+        "unif_w": 0.0005,
         "Number of moments used": 4,
-        "curv_w": 0.5,
+        "curv_w": 0.1,
         "delta_curv": 0.1,
         "curvature_penalization_mode": "mean",
-        "g_inv regularization eps": 0.1,
-        "lambda_contractive_encoder": 0.0001,
-        "delta_encoder": 10.0,
+        "g_inv regularization eps": 0.0,
+        "lambda_contractive_encoder": 0.0,
+        "delta_encoder": 0.0,
         "lambda_contractive_decoder": 0.0,
         "delta_decoder": 2,
         "diagnostic_mode": true,
@@ -44,17 +45,16 @@
         "sigma_ood": 0.2,
         "N_extr": 16,
         "r_ood": 0.001,
-        "OOD_w": 0.5
+        "OOD_w": 0.1
     },
     "training_results_on_test_data": {
-        "R^2": 0.583397626876831,
-        "mse_loss": 0.039360497146844864,
-        "unif_loss": 0.28906941413879395,
-        "curv_loss": 0.0002763190132100135,
-        "decoder_penalty": 187.003173828125
+        "R^2": 0.5850268006324768,
+        "mse_loss": 0.039206575602293015,
+        "unif_loss": 0.14782506227493286,
+        "curv_loss": 0.0012632173020392656
     },
-    "Path_pictures": "../experiments/MNIST_torus_AE/experiment27",
+    "Path_pictures": "../experiments/MNIST_torus_AE/experiment34",
     "Path_weights": "../nn_weights/",
     "Path_experiments": "../experiments/",
-    "weights_saved_at": "../nn_weights/MNIST_exp27.pt"
+    "weights_saved_at": "../nn_weights/MNIST_exp34.pt"
 }

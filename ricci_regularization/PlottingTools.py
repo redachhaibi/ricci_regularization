@@ -138,7 +138,7 @@ def plot_ae_outputs_selected(test_dataset,encoder,decoder,selected_labels = None
     return plt
 
 # borrowed from https://gist.github.com/jakevdp/91077b0cae40f8f8244a
-def discrete_cmap(N, base_cmap=None):
+def discrete_cmap(N, base_cmap=None, bright_colors = False):
     """Create an N-bin discrete colormap from the specified input map"""
 
     # Note that if base_cmap is a string or None, you can simply do
@@ -147,6 +147,9 @@ def discrete_cmap(N, base_cmap=None):
 
     base = plt.cm.get_cmap(base_cmap)
     color_list = base(np.linspace(0, 1, N))
+    if (N==2) and (bright_colors ==True):
+        color_list = base(np.array([0.3,0.85]))
+
     cmap_name = base.name + str(N)
     return base.from_list(cmap_name, color_list, N)
 def plot3losses(mse_train_list,uniform_train_list,curv_train_list):

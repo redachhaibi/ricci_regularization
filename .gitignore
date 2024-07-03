@@ -121,6 +121,7 @@ dmypy.json
 *.png
 *.gif
 *.pdf
+*.jpg
 
 #plots folder
 plots/*
