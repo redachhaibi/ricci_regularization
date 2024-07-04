@@ -4,6 +4,65 @@ import torch
 from torch.utils.data import Subset
 from torchvision import datasets, transforms
 import sklearn
+import ricci_regularization
+
+def get_dataloaders(dataset_config: dict, data_loader_config: dict):
+    datasets_root = '../../datasets/'  # Root directory for datasets
+
+    # Load dataset based on the name provided in dataset_config
+    if dataset_config["name"] == "MNIST":
+        # Load the MNIST dataset
+        train_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
+        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+    elif dataset_config["name"] == "MNIST01":
+        # Load the full MNIST dataset
+        full_mnist_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
+        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+        mask = (full_mnist_dataset.targets == -1)  # Initialize mask to select specific labels
+        selected_labels = dataset_config["selected_labels"]  # Get the list of labels to select
+        for label in selected_labels:
+            mask = mask | (full_mnist_dataset.targets == label)  # Update mask for each selected label
+        indices01 = torch.where(mask)[0]  # Get indices of the selected labels
+        dataset = Subset(full_mnist_dataset, indices01)  # Create a subset of MNIST with the selected labels
+    elif dataset_config["name"] == "Synthetic":
+        # Generate a synthetic dataset using specified parameters
+        torch.manual_seed(data_loader_config["random_seed"])  # Set the random seed for reproducibility
+        my_dataset = ricci_regularization.SyntheticDataset(
+            k=dataset_config["k"], 
+            n=dataset_config["n"],
+            d=dataset_config["d"], 
+            D=dataset_config["D"], 
+            shift_class=dataset_config["shift_class"],
+            intercl_var=dataset_config["intercl_var"], 
+            var_class=dataset_config["var_class"]
+        )
+        dataset = my_dataset.create  # Create the synthetic dataset
+    elif dataset_config["name"] == "Swissroll":
+        # Generate the Swissroll dataset
+        train_dataset = sklearn.datasets.make_swiss_roll(n_samples=dataset_config["n"], noise=dataset_config["sr_noise"])
+        sr_points = torch.from_numpy(train_dataset[0]).to(torch.float32)  # Convert points to tensor
+        sr_colors = torch.from_numpy(train_dataset[1]).to(torch.float32)  # Convert colors to tensor
+        from torch.utils.data import TensorDataset
+        dataset = TensorDataset(sr_points, sr_colors)  # Create a TensorDataset from points and colors
+    
+    m = len(dataset)  # Get the length of the training dataset
+    # Split the dataset into training and testing sets based on split_ratio
+    train_data, test_data = torch.utils.data.random_split(dataset, [m - int(m * data_loader_config["split_ratio"]), int(m * data_loader_config["split_ratio"])])
+
+    # Create data loaders for training and testing sets
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=data_loader_config["batch_size"])
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=data_loader_config["batch_size"], shuffle=data_loader_config["random_shuffling"])
+    
+    # Return a dictionary containing the training and testing data loaders
+    loaders = {
+        "train_loader": train_loader,
+        "test_loader": test_loader,
+        "test_dataset": test_dataset
+    }
+    return loaders
+
+
+
 
 def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     """
@@ -30,9 +89,8 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
     batch_size  = json_config["optimization_parameters"]["batch_size"]
     datasets_root = '../../datasets/'
     # Dataset uploading 
-    # import sys
-    # sys.path.append('../') # have to go 1 level up
-    import ricci_regularization
+
+   
     if dataset_name == "MNIST":
         #MNIST_SIZE = 28
         # MNIST Dataset
