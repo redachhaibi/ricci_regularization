@@ -9,21 +9,27 @@ dataset:
   #name: "Swissroll"
   #name: "Synthetic"
   #name: "MNIST"
-  k: 2 # number of classes
-  n: 18000 # relevant for synthetic and Swissroll datasets
-  D: 784 # dataset dim
-  d: 2 # intrinstic latent space dimention (by construction) Only for Synthetic Gaussians
-  shift_class: 0. # Only for Synthetic Gaussians
-  intercl_var: 0.1 # Only for Synthetic Gaussians
-  var_class: 1. # Only for Synthetic Gaussians
+  
+  # Generating parameters for synthetic dataset
+  k: 2              # number of classes
+  n: 18000          # relevant for synthetic and Swissroll datasets
+  D: 784            # dataset dim
+  d: 2              # intrinstic latent space dimention
+  shift_class: 0. 
+  intercl_var: 0.1
+  var_class: 1.   
+
+  # Parameters for MNIST dataset  
   selected_labels: [5,8] # (Only for MNIST) Labels selected for the experiment
+  
+  # Parameters for Swissroll dataset
   sr_noise: 1e-06 # only for Swissroll
 
 experiment:
   violent_saving: False  # If True a folder for experiment results is created and all plots will be saved there
   weights_loaded: False  # Flag indicating whether weights are loaded
   weights_saved: False  # Flag indicating whether weights should be saved
-  experiment_number: 9 # number of the current experiment
+  experiment_name: "ISaidCallItExperiment9" # number of the current experiment
 
 training_mode:
   diagnostic_mode: True  # Diagnostic mode flag
@@ -33,15 +39,15 @@ training_mode:
 loss_settings:
   lambda_recon: 1.0  # Weight for mean squared error in the loss function
   lambda_unif: 0.0005  # Weight for week convergence to uniform distribution in the loss function
-  num_moments: 4  # Number of empirical moments of the distribution penalized in the loss function
   lambda_curv: 0.1  # Weight for curvature regularization
   lambda_contractive_decoder: 0.0  # Weight for contractive decoder in the loss function
+  lambda_contractive_encoder: 0.0  # Weight for contractive encoder
+  num_moments: 4  # Number of empirical moments of the distribution penalized in the loss function
+  eps: 0.0  # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
   delta_decoder: 2  # Threshold parameter for outliers of the decoder Frobenius norm
   #djnpm = "mean"  # Decoder Jacobian norm penalization mode (not used yet). Could be "mean" or "max"
-  lambda_contractive_encoder: 0.0  # Weight for contractive encoder
   delta_encoder: 0.0  # Threshold parameter for the encoder Frobenius norm
   #ejnpm = "max"  # Encoder Jacobian norm penalization mode (not used yet). Could be "mean" or "max"
-  eps: 0.0  # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
   curvature_penalization_mode: "mean"  # Mode for curvature penalization
   delta_curv: 0.1  # Delta parameter for curvature penalization (meaningful only if "curvature_penalization_mode == max")
 
