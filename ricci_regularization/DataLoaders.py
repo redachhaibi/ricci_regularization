@@ -33,8 +33,8 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
             d=dataset_config["d"], 
             D=dataset_config["D"], 
             shift_class=dataset_config["shift_class"],
-            intercl_var=dataset_config["intercl_var"], 
-            var_class=dataset_config["var_class"]
+            interclass_variance=dataset_config["interclass_variance"], 
+            variance_of_classes=dataset_config["variance_of_classes"]
         )
         dataset = my_dataset.create  # Create the synthetic dataset
     elif dataset_config["name"] == "Swissroll":
@@ -115,13 +115,13 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
         d = json_config["architecture"]["latent_dim"]
         D = json_config["architecture"]["input_dim"]
         shift_class = json_config["dataset"]["parameters"]["shift_class"]
-        intercl_var = json_config["dataset"]["parameters"]["intercl_var"]
-        var_class = json_config["dataset"]["parameters"]["var_class"]
+        interclass_variance = json_config["dataset"]["parameters"]["interclass_variance"]
+        variance_of_classes = json_config["dataset"]["parameters"]["variance_of_classes"]
         # Generate dataset
         # via classes
         torch.manual_seed(0) # reproducibility
         my_dataset = ricci_regularization.SyntheticDataset(k=k,n=n,d=d,D=D,
-                                            shift_class=shift_class, intercl_var=intercl_var, var_class=var_class)
+                                            shift_class=shift_class, interclass_variance=interclass_variance, variance_of_classes=variance_of_classes)
 
         train_dataset = my_dataset.create
     elif dataset_name == "Swissroll":
