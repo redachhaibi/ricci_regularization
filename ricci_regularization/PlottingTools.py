@@ -109,33 +109,30 @@ def plot_ae_outputs(test_dataset,encoder,decoder,n=10,D=784):
     plt.show()
 
 def plot_ae_outputs_selected(test_dataset,encoder,decoder,selected_labels = None,D=784,dpi=400):
-    if selected_labels == None:
-       n = 10
+    if selected_labels is None:
+        n = 10
     else:
-       n = len(selected_labels)
-    plt.figure(figsize=(16*n/10,4.5),dpi=dpi)
+        n = len(selected_labels)
+    plt.figure(figsize=(6 * n / 10, 1.5), dpi=dpi)
     targets = test_dataset.targets.numpy()
-    t_idx = {i:np.where(targets==i)[0][0] for i in selected_labels}
+    t_idx = {i: np.where(targets == i)[0][0] for i in selected_labels}
     for i in range(n):
-      ax = plt.subplot(2,n,i+1)
-      img = test_dataset[t_idx[selected_labels[i]]][0].unsqueeze(0)
-      #encoder.eval()
-      #decoder.eval()
-      with torch.no_grad():
-         #rec_img  = decoder(encoder(img))
-         rec_img  = decoder(encoder(img.reshape(1,D))).reshape(1,28,28)
-      plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
-      ax.get_xaxis().set_visible(False)
-      ax.get_yaxis().set_visible(False)  
-      if i == n//2:
-        ax.set_title('Original images')
-      ax = plt.subplot(2, n, i + 1 + n)
-      plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')  
-      ax.get_xaxis().set_visible(False)
-      ax.get_yaxis().set_visible(False)  
-      if i == n//2:
-         ax.set_title('Reconstructed images') 
-    return plt
+        ax = plt.subplot(2, n, i + 1)
+        img = test_dataset[t_idx[selected_labels[i]]][0].unsqueeze(0)
+        with torch.no_grad():
+            rec_img = decoder(encoder(img.reshape(1, D))).reshape(1, 28, 28)
+        plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        if i == n // 2:
+            ax.set_title('Original images', fontsize=6)
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        if i == n // 2:
+            ax.set_title('Reconstructed images', fontsize=6)
+    plt.show() 
 
 # borrowed from https://gist.github.com/jakevdp/91077b0cae40f8f8244a
 def discrete_cmap(N, base_cmap=None, bright_colors = False):

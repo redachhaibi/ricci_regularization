@@ -2,40 +2,39 @@ architecture:
   type: "TorusAE"                  # Type of architecture being used
   # type = "TorusConvAE"           # Another type of architecture
   latent_dim: 2                    # latent space dimension
-  output_dim: 3                    # output dimension
+  output_dim: 784                  # output dimension
 
 dataset:
-  name:  "Swissroll"
-  n: 18000                         # number of dataset points
-  D: 3                             # dataset dim
+  name:  "MNIST01"
+  k: 2                             # number of selected labels
+  selected_labels: [5,8]           # selected labels
+  D: 784                           # dataset dim
   d: 2                             # intrinstic latent space dimention (by construction) 
-  swissroll_noise: 1.e-06          # only for Swissroll
 
 experiment:        
-  weights_loaded_from: False        # Path to another experiment from which weights are loaded
-  name: "Swissroll_exp1"           # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
-  path: "../experiments/Swissroll_exp1"       
+  weights_loaded_from: False       # Path to another experiment from which weights are loaded
+  name: "MNIST01_exp8"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
+  path: "../experiments/MNIST01_exp8" 
+        
 training_mode:         
-  diagnostic_mode: True            # Diagnostic mode flag: printing all losses plots. 
-  compute_curvature: True          # Flag to indicate whether to compute curvature
+  diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 
+  compute_curvature: True         # Flag to indicate whether to compute curvature
   OOD_regime: False                # Out-of-distribution regime on/off flag
 
 loss_settings:
   lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
-  lambda_unif: 1.0                 # Weight for week convergence to uniform distribution in the loss function
-  lambda_curv: 0.5e-4               # Weight for curvature regularization
-  lambda_contractive_encoder: 2.0  # Weight for contractive encoder
+  lambda_unif: 0.0005              # Weight for week convergence to uniform distribution in the loss function
+  lambda_curv: 0.1                 # Weight for curvature regularization
+  lambda_contractive_encoder: 0.0  # Weight for contractive encoder
          
-  num_moments: 2                   # Number of empirical moments of the distribution penalized in the loss function
+  num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   delta_encoder: 1.0               # Threshold parameter for the encoder Frobenius norm
-  eps: 0.1                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
-  
-  delta_curv: 0.1 
+  eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
   curvature_penalization_mode: "mean"
 
 optimizer_settings:       
-  lr: 0.001                       # Learning rate for the optimizer
-  num_epochs: 10                    # Number of epochs for training
+  lr: 0.001                        # Learning rate for the optimizer
+  num_epochs: 20                   # Number of epochs for training
   weight_decay: 0.0                # Weight decay for the optimizer
        
 data_loader_settings:       

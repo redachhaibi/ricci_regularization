@@ -1,12 +1,12 @@
 import torch
 import math
 import ricci_regularization
-def curv_loss_on_OOD_samples(extreme_curv_points_tensor, decoder, sigma_ood,n_ood, N_extr,latent_space_dim):
+def curv_loss_on_OOD_samples(extreme_curv_points_tensor, decoder, OOD_params_dict, latent_space_dim):
     device = extreme_curv_points_tensor.device
     with torch.no_grad():
-        centers = extreme_curv_points_tensor.repeat_interleave(n_ood,dim=0)
+        centers = extreme_curv_points_tensor.repeat_interleave(OOD_params_dict["n_ood"],dim=0)
         centers = centers.to(device)
-        samples_centered_at_zero = (sigma_ood**2)*torch.randn(N_extr*n_ood, latent_space_dim, device=device)
+        samples_centered_at_zero = (OOD_params_dict["sigma_ood"]**2)*torch.randn(OOD_params_dict["N_extr"]*OOD_params_dict["n_ood"], latent_space_dim, device=device)
         OOD_batch = centers + samples_centered_at_zero
     OOD_batch.requires_grad_()
     # OOD loss function
@@ -22,7 +22,7 @@ def curv_loss_on_OOD_samples(extreme_curv_points_tensor, decoder, sigma_ood,n_oo
 
 def find_extreme_curvature_points(data_batch, extreme_curv_points_tensor,
                  extreme_curv_value_tensor,batch_idx,encoder, decoder,
-                 r_ood, N_extr, output_dim, print_values = False):
+                 OOD_params_dict, output_dim, print_values = False):
     # Exrteme curvature batch
     new_curv_points_tensor = encoder(data_batch.view(-1,output_dim))
     new_curv_points_tensor = new_curv_points_tensor.detach()
@@ -41,8 +41,8 @@ def find_extreme_curvature_points(data_batch, extreme_curv_points_tensor,
     extreme_curv_value_tensor = torch.index_select(extreme_curv_value_tensor,dim = 0, index= indices)
     
     # take most N_extr//2 negative and N_extr//2 most positive
-    extreme_curv_points_tensor = torch.cat((extreme_curv_points_tensor[:N_extr//2],extreme_curv_points_tensor[-N_extr//2:]),dim=0)
-    extreme_curv_value_tensor = torch.cat((extreme_curv_value_tensor[:N_extr//2],extreme_curv_value_tensor[-N_extr//2:]),dim=0)
+    extreme_curv_points_tensor = torch.cat((extreme_curv_points_tensor[:OOD_params_dict["N_extr"]//2],extreme_curv_points_tensor[-OOD_params_dict["N_extr"]//2:]),dim=0)
+    extreme_curv_value_tensor = torch.cat((extreme_curv_value_tensor[:OOD_params_dict["N_extr"]//2],extreme_curv_value_tensor[-OOD_params_dict["N_extr"]//2:]),dim=0)
     extreme_curv_points_tensor = extreme_curv_points_tensor.detach()
     metric_on_OOD = ricci_regularization.metric_jacfwd_vmap(extreme_curv_points_tensor,
                                            function=decoder)
@@ -55,7 +55,7 @@ def find_extreme_curvature_points(data_batch, extreme_curv_points_tensor,
     #            "\n at points:\n", extreme_curv_points_tensor)
         
     # multiply curv values by decay factor
-    extreme_curv_value_tensor = math.exp(-r_ood)*extreme_curv_value_tensor
+    extreme_curv_value_tensor = math.exp(-OOD_params_dict["r_ood"])*extreme_curv_value_tensor
     
     # if not enough points, keep 16 of each (min and max) anyway      
     # but when OOD sampling, sample around min negative
