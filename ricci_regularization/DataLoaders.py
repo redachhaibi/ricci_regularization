@@ -10,6 +10,8 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
     datasets_root = '../../datasets/'  # Root directory for datasets
 
     # Load dataset based on the name provided in dataset_config
+    torch.manual_seed(data_loader_config["random_seed"])  # Set the random seed for reproducibility
+
     if dataset_config["name"] == "MNIST":
         # Load the MNIST dataset
         train_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
@@ -26,7 +28,6 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
         dataset = Subset(full_mnist_dataset, indices01)  # Create a subset of MNIST with the selected labels
     elif dataset_config["name"] == "Synthetic":
         # Generate a synthetic dataset using specified parameters
-        torch.manual_seed(data_loader_config["random_seed"])  # Set the random seed for reproducibility
         my_dataset = ricci_regularization.SyntheticDataset(
             k=dataset_config["k"], 
             n=dataset_config["n"],
@@ -39,7 +40,9 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
         dataset = my_dataset.create  # Create the synthetic dataset
     elif dataset_config["name"] == "Swissroll":
         # Generate the Swissroll dataset
-        train_dataset = sklearn.datasets.make_swiss_roll(n_samples=dataset_config["n"], noise=dataset_config["sr_noise"])
+        train_dataset = sklearn.datasets.make_swiss_roll(n_samples=dataset_config["n"], 
+            noise=dataset_config["swissroll_noise"],random_state = data_loader_config["random_seed"])
+        
         sr_points = torch.from_numpy(train_dataset[0]).to(torch.float32)  # Convert points to tensor
         sr_colors = torch.from_numpy(train_dataset[1]).to(torch.float32)  # Convert colors to tensor
         from torch.utils.data import TensorDataset
@@ -56,9 +59,10 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
     # Return a dictionary containing the training and testing data loaders
     loaders = {
         "train_loader": train_loader,
-        "test_loader": test_loader,
-        "test_dataset": test_dataset
+        "test_loader": test_loader
     }
+    if dataset_config["name"] in ["MNIST01","MNIST"]:
+        loaders["test_dataset"] = test_dataset
     return loaders
 
 
@@ -125,11 +129,11 @@ def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
 
         train_dataset = my_dataset.create
     elif dataset_name == "Swissroll":
-        sr_noise = json_config["dataset"]["parameters"]["sr_noise"]
+        swissroll_noise = json_config["dataset"]["parameters"]["swissroll_noise"]
         sr_numpoints = json_config["dataset"]["parameters"]["sr_numpoints"]
 
         D = 3
-        train_dataset =  sklearn.datasets.make_swiss_roll(n_samples=sr_numpoints, noise=sr_noise)
+        train_dataset =  sklearn.datasets.make_swiss_roll(n_samples=sr_numpoints, noise=swissroll_noise)
         sr_points = torch.from_numpy(train_dataset[0]).to(torch.float32)
         #sr_points = torch.cat((sr_points,torch.zeros(sr_numpoints,D-3)),dim=1)
         sr_colors = torch.from_numpy(train_dataset[1]).to(torch.float32)
