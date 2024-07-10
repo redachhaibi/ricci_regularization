@@ -13,7 +13,7 @@ dataset:
 
 experiment:        
   weights_loaded_from: False       # Path to another experiment from which weights are loaded
-  name: "MNIST01_exp8"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
+  name: "MNIST01_exp8"             # name of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
   path: "../experiments/MNIST01_exp8" 
         
 training_mode:         
