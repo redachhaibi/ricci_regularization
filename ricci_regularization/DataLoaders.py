@@ -14,8 +14,9 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
 
     if dataset_config["name"] == "MNIST":
         # Load the MNIST dataset
-        train_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
+        dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
         test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+
     elif dataset_config["name"] == "MNIST01":
         # Load the full MNIST dataset
         full_mnist_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)

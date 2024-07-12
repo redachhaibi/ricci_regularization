@@ -1,16 +1,14 @@
 import torch
 import functools
 
+# Jacobian norm for contractive loss computation
+def Jacobian_norm_jacrev(input_tensor, function, input_dim):
+    input_tensor = input_tensor.reshape(-1,input_dim)
+    return torch.func.jacrev(function)(input_tensor).norm()
+
+Jacobian_norm_jacrev_vmap = torch.func.vmap(Jacobian_norm_jacrev)
+
 # Forward mode propagation via jacfwd
-"""
-def metric_jacfwd(u, function):
-    u = u.unsqueeze(0) # newline
-    jac = torch.func.jacfwd(function)(u).squeeze().reshape(-1,u.shape[-1])
-    #jac = torch.func.jacfwd(function)(u).squeeze()
-    # squeezing is needed to get rid of 1-dimentions
-    metric = torch.matmul(jac.T,jac)
-    return metric
-"""
 
 def metric_jacfwd(u, function, latent_space_dim=2):
     u = u.reshape(-1,latent_space_dim)
