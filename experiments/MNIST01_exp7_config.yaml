@@ -6,19 +6,16 @@ architecture:
 
 dataset:
   name:  "MNIST01"
-  k: 2                             # number of selected labels
   selected_labels: [5,8]           # selected labels
-  D: 784                           # dataset dim
-  d: 2                             # intrinstic latent space dimention (by construction)
 
 experiment:        
   weights_loaded_from: False       # Path to another experiment from which pre-trained AE weights are loaded. False if no weights of a pre-trained AE loaded.
   name: "MNIST01_exp7"             # name of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
-  path: "../experiments/MNIST01_exp7"  
         
 training_mode:         
   diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 
   compute_curvature: False         # Flag to indicate whether to compute curvature
+  compute_contractive_loss: False  # Flag to indicate whether to compute contractive loss
   OOD_regime: False                # Out-of-distribution regime on/off flag
 
 loss_settings:
@@ -28,7 +25,6 @@ loss_settings:
          
   num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
-  curvature_penalization_mode: "mean" 
 
 optimizer_settings:       
   lr: 0.001                        # Learning rate for the optimizer
