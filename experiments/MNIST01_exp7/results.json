@@ -1,0 +1,6 @@
+{
+    "R^2_test_data": 0.571681559085846,
+    "mse_loss_test_data": 0.04254655912518501,
+    "unif_loss_test_data": 0.29255276918411255,
+    "curv_loss_test_data": 0.11153283715248108
+}
