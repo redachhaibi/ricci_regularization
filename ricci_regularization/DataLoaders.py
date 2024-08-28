@@ -81,7 +81,9 @@ def get_tuned_nn(config: dict, additional_path = ''):
     if torch.cuda.is_available():
         torus_ae.cuda()
 
-    PATH_ae_wights = additional_path + config["experiment"]["path"]+"/ae_weights.pt"
+    #PATH_ae_wights = additional_path + config["experiment"]["path"]+"/ae_weights.pt"
+    # e.g. additional_path = "../"
+    PATH_ae_wights = additional_path + "../nn_weights/" + config["experiment"]["name"] + ".pt"
     
     torus_ae.load_state_dict(torch.load(PATH_ae_wights))
     torus_ae.eval()
