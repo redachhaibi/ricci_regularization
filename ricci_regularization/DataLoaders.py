@@ -64,32 +64,43 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict):
     }
     if dataset_config["name"] in ["MNIST01","MNIST"]:
         loaders["test_dataset"] = test_dataset
+    else:
+        loaders["test_dataset"] = test_data
     return loaders
 
 def get_tuned_nn(config: dict, additional_path = ''):
-    # AE structure
+    # this function returns the initialized and loaded model  and the path to the model weights
     latent_dim = config["architecture"]["latent_dim"]
     input_dim  = config["architecture"]["input_dim"]
+
     try:
+        # Attempt to retrieve the architecture type from the configuration dictionary
         architecture_type = config["architecture"]["name"]
     except KeyError:
+        # Default to "TorusAE" if the architecture type is not specified
         architecture_type = "TorusAE"
-    if architecture_type== "TorusAE":
-        torus_ae   = ricci_regularization.Architectures.TorusAE(x_dim=input_dim, h_dim1= 512, h_dim2=256, z_dim=latent_dim)
-    elif architecture_type =="TorusConvAE":
-        torus_ae   = ricci_regularization.Architectures.TorusConvAE(x_dim=input_dim, h_dim1= 512, h_dim2=256, z_dim=latent_dim,pixels=28)
+    
+    # Initialize the neural network based on the specified architecture type
+    if architecture_type == "TorusAE":
+        torus_ae = ricci_regularization.Architectures.TorusAE(x_dim=input_dim, h_dim1=512, h_dim2=256, z_dim=latent_dim)
+    elif architecture_type == "TorusConvAE":
+        torus_ae = ricci_regularization.Architectures.TorusConvAE(x_dim=input_dim, h_dim1=512, h_dim2=256, z_dim=latent_dim, pixels=28)
+    
+    # If a GPU is available, move the model to the GPU
     if torch.cuda.is_available():
         torus_ae.cuda()
 
-    #PATH_ae_wights = additional_path + config["experiment"]["path"]+"/ae_weights.pt"
-    # e.g. additional_path = "../"
-    #PATH_ae_wights = additional_path + "../nn_weights/" + config["experiment"]["name"] + ".pt"
+    # Construct the path to the saved model weights using the experiment name from the configuration
     PATH_ae_wights = additional_path + "../experiments/" + config["experiment"]["name"] + "/ae_weights.pt"
     
+    # Load the saved model weights from the specified path
     torus_ae.load_state_dict(torch.load(PATH_ae_wights))
+    
+    # Set the model to evaluation mode
     torus_ae.eval()
     
-    return torus_ae
+    return torus_ae, PATH_ae_wights
+
 
 # this is very oldstyle. to be deprecated soon
 def get_dataloaders_tuned_nn(Path_experiment_json:str, additional_path = ''):
