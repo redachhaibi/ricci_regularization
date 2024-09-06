@@ -132,7 +132,7 @@ def plot_ae_outputs_selected(test_dataset,encoder,decoder,selected_labels = None
         ax.get_yaxis().set_visible(False)
         if i == n // 2:
             ax.set_title('Reconstructed images', fontsize=6)
-    plt.show() 
+    return ax
 
 # borrowed from https://gist.github.com/jakevdp/91077b0cae40f8f8244a
 def discrete_cmap(N, base_cmap=None, bright_colors = False):
