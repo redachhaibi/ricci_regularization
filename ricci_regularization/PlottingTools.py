@@ -285,7 +285,7 @@ def translate_dict(dict2print, include_curvature_plots = True, eps = 0):
     "plot2": {
         "yname_latex": "$\mathcal{L}_\mathrm{unif}$",
         "data": {
-            "$\widehat\mathcal{L}_\mathrm{unif}$": dict2print["uniform_loss"]
+            "$\widehat\mathcal{L}_\mathrm{unif}$": dict2print["Uniform"]
         }
     }
     }
@@ -293,7 +293,7 @@ def translate_dict(dict2print, include_curvature_plots = True, eps = 0):
         dictplots["plot3"] = {
             "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
             "data": {
-                "$\widehat\mathcal{L}_\mathrm{curv}$": dict2print["curvature_loss"]
+                "$\widehat\mathcal{L}_\mathrm{curv}$": dict2print["Curvature"]
             }
         }
         dictplots["plot4"] = {
@@ -376,3 +376,57 @@ def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
         i += 1
     plt.show()
     return fig,axes
+
+def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config, device,
+               show_title=True, colormap='jet', s=40, draw_grid=True, figsize=(8, 6)):
+    # Plotting the latent embedding of "data" using the encoder function in "encoder"
+    # params of the dataset taken from YAML file "config"
+    # Extract labels and data from the dataset
+    labels = data[:][1]
+    data = data[:][0]
+    
+    D = config["architecture"]["input_dim"]
+    dataset_name = config["dataset"]["name"]
+
+    # figure out the number of classes of data
+    if config["dataset"]["name"] == "MNIST":
+        k = 10
+    elif config["dataset"]["name"] == "MNIST01":
+        k = len(config["dataset"]["selected_labels"])
+    elif config["dataset"]["name"] == "Synthetic":
+        k = config["dataset"]["k"]
+    
+    # Perform encoding
+    with torch.no_grad():
+        data = data.view(-1, D)  # reshape the data (flatten)
+        data = data.to(device)  # Uncomment this if needed to move data to GPU/CPU
+        encoded_data = encoder(data)
+
+    # Convert to numpy for plotting
+
+    encoded_data2plot = ( encoded_data.cpu() / torch.pi ).numpy()
+    labels = labels.numpy()
+
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create scatter plot
+    if dataset_name == "Swissroll":
+        sc = ax.scatter(encoded_data2plot[:, 0], encoded_data2plot[:, 1], s=s, c=labels, alpha=1.0, marker='o', edgecolor='none', cmap = colormap)
+    else:
+        sc = ax.scatter(encoded_data2plot[:, 0], encoded_data2plot[:, 1], s=s, c=labels, alpha=1.0, marker='o', edgecolor='none', cmap = discrete_cmap(k, colormap))
+            # a smart way to place ticks nicely on a colorbar
+        from matplotlib.colors import  BoundaryNorm
+        bounds = np.linspace(-0.5, k - 0.5, k + 1)
+        norm = BoundaryNorm(bounds, discrete_cmap(k, colormap).N)
+        cbar = plt.colorbar(sc, boundaries=bounds, norm=norm, ticks=np.arange(k))
+
+    # Add title if required
+    if show_title:
+        ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')
+    
+    # Enable grid if required
+    ax.grid(draw_grid)
+
+    # Return the figure object
+    return fig
