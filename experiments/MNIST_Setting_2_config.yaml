@@ -9,7 +9,7 @@ dataset:
 
 experiment:        
   weights_loaded_from: False       # Path to another experiment from which weights are loaded
-  name: "MNIST_without_curvature_regularization"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
+  name: "MNIST_Setting_2"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
         
 training_mode:         
   diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 

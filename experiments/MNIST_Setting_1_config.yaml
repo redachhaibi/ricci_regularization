@@ -9,18 +9,18 @@ dataset:
 
 experiment:        
   weights_loaded_from: False       # Path to another experiment from which weights are loaded
-  name: "MNIST_with_curvature_regularization"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
+  name: "MNIST_Setting_1"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
         
 training_mode:         
   diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 
-  compute_curvature: True         # Flag to indicate whether to compute curvature
+  compute_curvature: False         # Flag to indicate whether to compute curvature
   compute_contractive_loss: False # Flag to indicate whether to compute contractive loss
   OOD_regime: False               # Out-of-distribution regime on/off flag
 
 loss_settings:
   lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
-  lambda_unif: 0.0005              # Weight for week convergence to uniform distribution in the loss function
-  lambda_curv: 0.1                 # Weight for curvature regularization
+  lambda_unif: 0.0              # Weight for week convergence to uniform distribution in the loss function
+  lambda_curv: 0.0                 # Weight for curvature regularization
   num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
 
