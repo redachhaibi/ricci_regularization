@@ -378,7 +378,7 @@ def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
     return fig,axes
 
 def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config, device,
-               show_title=True, colormap='jet', s=40, draw_grid=True, figsize=(8, 6)):
+               show_title=True, colormap='jet', s=40, draw_grid=False, figsize=(9, 9)):
     # Plotting the latent embedding of "data" using the encoder function in "encoder"
     # params of the dataset taken from YAML file "config"
     # Extract labels and data from the dataset
@@ -407,6 +407,7 @@ def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config
     encoded_data2plot = ( encoded_data.cpu() / torch.pi ).numpy()
     labels = labels.numpy()
 
+    #plt.rcParams.update({'font.size': 20})
     # Create figure and axes
     fig, ax = plt.subplots(figsize=figsize)
     
@@ -427,6 +428,9 @@ def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config
     
     # Enable grid if required
     ax.grid(draw_grid)
+
+    # Adjust layout to prevent elements from being cut off
+    fig.tight_layout()
 
     # Return the figure object
     return fig
