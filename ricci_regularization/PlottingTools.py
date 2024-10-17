@@ -382,8 +382,10 @@ def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config
     # Plotting the latent embedding of "data" using the encoder function in "encoder"
     # params of the dataset taken from YAML file "config"
     # Extract labels and data from the dataset
-    labels = data[:][1]
-    data = data[:][0]
+    #labels = data[:][1]
+    #data = data[:][0]
+    labels = data.targets
+    data = data.data
     
     D = config["architecture"]["input_dim"]
     dataset_name = config["dataset"]["name"]

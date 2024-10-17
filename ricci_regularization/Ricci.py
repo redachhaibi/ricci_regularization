@@ -19,6 +19,62 @@ def metric_jacfwd(u, function, latent_space_dim=2):
 
 metric_jacfwd_vmap = torch.func.vmap(metric_jacfwd)
 
+# this function is auxiliary in computing metric and its derivatives later
+# as one needs to output both the result and its derivative simultanuousely 
+def aux_func_metric(x, function):
+    g = metric_jacfwd( x, function=function)
+    return g, g
+
+# this also not vectorized
+def Ch_g_g_inv_jacfwd (u, function, eps = 0.0):
+    # compute metric and its derivatives at a batch of points
+    dg, g = torch.func.jacfwd( functools.partial(aux_func_metric, function=function),
+                         has_aux=True)( u )
+    # compute inverse of metric with some regularization param eps    
+    d = g.shape[0]
+    device = g.device
+    g_inv = torch.inverse(g + eps*torch.eye(d,device=device))
+    # compute Christoffel symbols
+    Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
+              torch.einsum('im,mlk->ikl',g_inv,dg)-
+              torch.einsum('im,klm->ikl',g_inv,dg)
+              )
+    return Ch, g, g_inv
+
+def aux_func(x,function, eps=0.0):
+    Ch, g, g_inv = Ch_g_g_inv_jacfwd( x, function=function, eps=eps)
+    return Ch, (Ch, g, g_inv)
+#dCh, (Ch, g_inv) = vmap(jacfwd(functools.partial( aux_func, function=decoder, eps=0. ),
+#                            has_aux=True))( points )
+
+# this also not vectorized
+def Sc_g_jacfwd (u, function, eps = 0.0):
+    # compute Christoffel symbols and derivatives and inverse of metric
+    dCh, (Ch, g, g_inv) = torch.func.jacfwd(functools.partial( aux_func, function=function, eps=eps),
+                            has_aux=True)( u )
+    
+    Riemann = torch.einsum("iljk->ijkl",dCh) - torch.einsum("ikjl->ijkl",dCh)
+    Riemann += torch.einsum("ikp,plj->ijkl", Ch, Ch) - torch.einsum("ilp,pkj->ijkl", Ch, Ch)
+    
+    Ricci = torch.einsum("cacb->ab",Riemann)
+    Sc = torch.einsum('ab,ab',g_inv,Ricci)
+    return Sc, g
+# vectorization
+Sc_jacfwd_vmap = torch.func.vmap(Sc_g_jacfwd)
+
+# computing the loss
+def curvature_loss_jacfwd (points, function, eps = 0.0):
+    # compute Christoffel symbols and derivatives and inverse of metric
+    dCh, (Ch, g, g_inv) = torch.func.vmap( torch.func.jacfwd(functools.partial( aux_func, function=function, eps=eps),
+                            has_aux=True) )( points )
+    
+    Riemann = torch.einsum("biljk->bijkl",dCh) - torch.einsum("bikjl->bijkl",dCh)
+    Riemann += torch.einsum("bikp,bplj->bijkl", Ch, Ch) - torch.einsum("bilp,bpkj->bijkl", Ch, Ch)
+    
+    Ricci = torch.einsum("bcack->bak",Riemann)
+    R = torch.einsum('bak,bak',g_inv,Ricci)
+    return ( ( R**2 ) * torch.sqrt( torch.det(g) ) ).mean()
+
 def metric_inv_jacfwd(u, function, eps=0.0):
     g = metric_jacfwd(u,function)
     d = g.shape[0]
@@ -37,7 +93,6 @@ def metric_der_jacfwd (u, function):
 metric_der_jacfwd_vmap = torch.func.vmap(metric_der_jacfwd)
 
 def Ch_jacfwd (u, function, eps = 0.0):
-    g = metric_jacfwd(u,function)
     g_inv = metric_inv_jacfwd(u,function,eps=eps)
     dg = metric_der_jacfwd(u,function)
     Ch = 0.5*(torch.einsum('im,mkl->ikl',g_inv,dg)+
@@ -83,12 +138,12 @@ def Ric_jacfwd(u, function, eps=0.0):
 
 Ric_jacfwd_vmap = torch.func.vmap(Ric_jacfwd)
 
-def Sc_jacfwd (u, function, eps = 0.0):
+def Sc_jacfwd_old (u, function, eps = 0.0):
     Ricci = Ric_jacfwd(u, function=function,eps=eps)
     metric_inv = metric_inv_jacfwd(u,function=function, eps=eps)
     Sc = torch.einsum('ab,ab',metric_inv,Ricci)
     return Sc
-Sc_jacfwd_vmap = torch.func.vmap(Sc_jacfwd)
+Sc_jacfwd_old_vmap = torch.func.vmap(Sc_jacfwd_old)
 """
 def Sc_jacfwd (u, function, eps = 0.0):
     metric = metric_jacfwd(u, function=function)

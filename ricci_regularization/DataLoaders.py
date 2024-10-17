@@ -6,16 +6,22 @@ from torchvision import datasets, transforms
 import sklearn
 import ricci_regularization
 
-def get_dataloaders(dataset_config: dict, data_loader_config: dict):
+def get_dataloaders(dataset_config: dict, data_loader_config: dict, dtype: str):
     datasets_root = '../../datasets/'  # Root directory for datasets
 
     # Load dataset based on the name provided in dataset_config
     torch.manual_seed(data_loader_config["random_seed"])  # Set the random seed for reproducibility
 
+    # Define the transformation: Convert to tensor and change the type to float64
+    transform = transforms.Compose([
+        transforms.ToTensor(),  # Converts the PIL image to torch.Tensor (default: torch.float32)
+        transforms.Lambda(lambda x: x.to(dtype))  # Convert the tensor to torch.float64
+    ])
+
     if dataset_config["name"] == "MNIST":
         # Load the MNIST dataset
-        dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
-        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+        dataset = datasets.MNIST(root=datasets_root, train=True, transform=transform, download=True)
+        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transform, download=False)
 
     elif dataset_config["name"] == "MNIST01":
         # Load the full MNIST dataset

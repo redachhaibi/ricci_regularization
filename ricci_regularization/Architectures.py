@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class TorusAE(nn.Module):
-    def __init__(self, x_dim, h_dim1, h_dim2, z_dim):
+    def __init__(self, x_dim, h_dim1, h_dim2, z_dim, dtype = torch.float32):
         super(TorusAE, self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
@@ -10,14 +10,14 @@ class TorusAE(nn.Module):
         self.non_linearity = torch.sin
         self.non_linearity2 = torch.cos # should this not be vice versa??
         # encoder part
-        self.fc1 = nn.Linear(x_dim, h_dim1)
-        self.fc2 = nn.Linear(h_dim1, h_dim2)
-        self.fc3 = nn.Linear(h_dim2, z_dim)
+        self.fc1 = nn.Linear(x_dim, h_dim1, dtype=dtype)
+        self.fc2 = nn.Linear(h_dim1, h_dim2, dtype=dtype)
+        self.fc3 = nn.Linear(h_dim2, z_dim, dtype=dtype)
         # decoder part
         # Double dimension as circle is mimicked using sin and cos charts
-        self.fc4 = nn.Linear(2*z_dim, h_dim2)
-        self.fc5 = nn.Linear(h_dim2, h_dim1)
-        self.fc6 = nn.Linear(h_dim1, x_dim)
+        self.fc4 = nn.Linear(2*z_dim, h_dim2, dtype=dtype)
+        self.fc5 = nn.Linear(h_dim2, h_dim1, dtype=dtype)
+        self.fc6 = nn.Linear(h_dim1, x_dim, dtype=dtype)
         
     def encoder(self, x):
         h = self.non_linearity(self.fc1(x))
