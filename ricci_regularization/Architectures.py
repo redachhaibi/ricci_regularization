@@ -87,7 +87,13 @@ class TorusConvAE(nn.Module):
         self.fc6 = nn.Linear(h_dim1, x_dim)
         
         self.encoder_cnn = nn.Sequential(
-            nn.Conv2d(1, 8, 3, stride=2, padding=1),
+            nn.Conv2d(1, 8, 3, stride=1, padding=1),
+            nn.BatchNorm2d(8, track_running_stats=False),
+            nn.ReLU(True),
+            nn.Conv2d(8, 8, 3, stride=1, padding=1),
+            nn.BatchNorm2d(8, track_running_stats=False),
+            nn.ReLU(True),
+            nn.Conv2d(8, 8, 3, stride=2, padding=1),
             nn.ReLU(True),
             nn.Conv2d(8, 16, 3, stride=2, padding=1),
             nn.BatchNorm2d(16, track_running_stats=False),

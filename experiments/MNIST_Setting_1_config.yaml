@@ -1,8 +1,9 @@
 architecture:
-  type: "TorusAE"                  # Type of architecture being used
+  type: "TorusConvAE"                  # Type of architecture being used
   latent_dim: 2                    # latent space dimension
   input_dim: 784                   # input dimension
   output_dim: 784                  # output dimension
+  weights_dtype: float32           # weights dtype
 
 dataset:
   name:  "MNIST"
@@ -13,14 +14,15 @@ experiment:
         
 training_mode:         
   diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 
-  compute_curvature: False         # Flag to indicate whether to compute curvature
+  compute_curvature: True         # Flag to indicate whether to compute curvature
   compute_contractive_loss: False # Flag to indicate whether to compute contractive loss
-  OOD_regime: False               # Out-of-distribution regime on/off flag
+  OOD_regime: False 
+  curvature_computation_mode: "jacfwd"     # Out-of-distribution regime on/off flag
 
 loss_settings:
   lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
   lambda_unif: 0.0              # Weight for week convergence to uniform distribution in the loss function
-  lambda_curv: 0.0                 # Weight for curvature regularization
+  lambda_curv: 1.0                 # Weight for curvature regularization
   num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
 

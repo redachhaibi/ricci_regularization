@@ -377,15 +377,19 @@ def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
     plt.show()
     return fig,axes
 
-def point_plot(encoder, data: torch.utils.data.dataset.Subset, batch_idx, config, device,
+def point_plot(encoder, data: torch.utils.data.dataset.Subset, dataset_name, batch_idx, config, device,
                show_title=True, colormap='jet', s=40, draw_grid=False, figsize=(9, 9)):
     # Plotting the latent embedding of "data" using the encoder function in "encoder"
     # params of the dataset taken from YAML file "config"
     # Extract labels and data from the dataset
     #labels = data[:][1]
     #data = data[:][0]
-    labels = data.targets
-    data = data.data
+    if dataset_name == "Synthetic":
+        labels = data.dataset.tensors[1]
+        data = data.dataset.tensors[0]
+    else:
+        labels = data.targets
+        data = data.data
     
     D = config["architecture"]["input_dim"]
     dataset_name = config["dataset"]["name"]
