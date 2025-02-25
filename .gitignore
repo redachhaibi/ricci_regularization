@@ -117,11 +117,12 @@ ENV/
 .dmypy.json
 dmypy.json
 
-#Images, gifs, pdf files
+#Images, gifs, pdf files, videos
 *.png
 *.gif
 *.pdf
 *.jpg
+*.avi
 
 #plots folder
 plots/*
@@ -130,6 +131,7 @@ plots/*
 ipynb/demos/data/*
 ipynb/dataset/*
 datasets/*
+data/*
 
 #nn weights
 nn_weights/*

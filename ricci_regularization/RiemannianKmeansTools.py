@@ -48,13 +48,13 @@ def construct_interpolation_points_on_segments_connecting_centers2encoded_data(s
     final_points_expanded = final_points.unsqueeze(0).unsqueeze(2)        # Shape: (1, num_final_points, 1, points_dim)
 
     # Compute all intermediate points using linear interpolation
-    all_points_on_geodesics = starting_points_expanded + t * (final_points_expanded - starting_points_expanded)  # Shape: (num_data_points, num_clusters, num_aux_points, latent_dim)
+    geodesic_curve = starting_points_expanded + t * (final_points_expanded - starting_points_expanded)  # Shape: (num_data_points, num_clusters, num_aux_points, latent_dim)
 
     if cut_off_ends == True:
         # Select interpolation_points cutting of the starting and the final point for every segment
-        interpolation_points = all_points_on_geodesics[:,:,1:-1,:]
+        interpolation_points = geodesic_curve[:,:,1:-1,:]
     else:
-        interpolation_points = all_points_on_geodesics
+        interpolation_points = geodesic_curve
     return interpolation_points
 
 def geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points):
@@ -86,8 +86,8 @@ def geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_
     final_points_expanded = final_points.unsqueeze(0).unsqueeze(2)  # Shape: (1, num_clusters, 1, latent_dim)
     final_points_expanded = final_points_expanded.expand(num_starting_points, num_clusters , 1, latent_dim)
     # concatenate the starting points, the interpolation_points and final_points  along the dimention associated interpolation_points
-    all_points_on_geodesics = torch.cat((starting_points_expanded, parameters_of_geodesics, final_points_expanded),dim=2) 
-    return all_points_on_geodesics
+    geodesic_curve = torch.cat((starting_points_expanded, parameters_of_geodesics, final_points_expanded),dim=2) 
+    return geodesic_curve
 
 def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points):
     """
@@ -119,7 +119,7 @@ def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics,
     geodesic_curve = linear_curve + torch.einsum("sn,bend->besd", basis, parameters)
     return geodesic_curve
 
-def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None):
+def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, reduction = "sum"):
     """
     Computes the energy of geodesic curves using finite differences.
 
@@ -139,6 +139,7 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
         A function that decodes geodesic curves from their latent representation.
     geodesic_solver: NumericalGeodesics
         A solver used to compute geodesics numerically.
+    reduction: 'sum', 'none'
 
     Returns:
     energy: torch.Tensor (scalar)
@@ -152,11 +153,15 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
     # decode the geodesics
     decoded_geodesic_curve = decoder(geodesic_curve)
     # Compute energy (finite differences)
-    energy = ( (decoded_geodesic_curve[:,:, 1:, :] - decoded_geodesic_curve[:,:, :-1, :]) ** 2 ).sum()
-    # Warning! the outpiut is the single scalar, i.e the sum of all the energies
+    tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:]
+    if reduction == "none":
+        energy = (tangent_vectors**2).sum(dim=(-2,-1)) # comute Euclidean compute_lengths of the curves in R^D
+    if reduction == "sum":
+        energy = (tangent_vectors**2).sum()
+    # Warning! by default the outpiut is the single scalar, i.e the sum of all the energies
     return energy
 
-def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None):
+def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, reduction="none"):
     """
     Computes the lengths of geodesic curves in Euclidean space.
 
@@ -188,14 +193,19 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
         geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
     decoded_geodesic_curve = decoder(geodesic_curve)
     tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:]
-    computed_lengths = torch.sqrt((tangent_vectors**2).sum(dim=(-2,-1))) # comute Euclidean compute_lengths of the curves in R^D
-    # Warning! the outpiut is the vector of length of all geodesics 
-    return computed_lengths
+    if reduction == "none":
+        lengths = (tangent_vectors).norm(dim=(-1)).sum(dim=(-1)) # first find all norms of small tangent vectors in the discretization then sum them for each geodesic
+    if reduction == "sum":
+        lengths = (tangent_vectors).norm(dim=(-1)).sum()
+    if reduction == "old":    
+        lengths = torch.sqrt((tangent_vectors**2).sum(dim=(-2,-1))) # seems to be a wrong formula
+    # Warning! by default the outpiut is the vector of length of all geodesics 
+    return lengths
 
 # ---------------------------------------
 #plotting
 
-def plot_octopus(all_points_on_geodesics, memberships = None, meaningful_geodesics = None, 
+def plot_octopus(geodesic_curve, memberships = None, 
                  saving_folder = None, suffix = None, verbose = True,
                  xlim = torch.pi, ylim = torch.pi):
     """
@@ -203,10 +213,9 @@ def plot_octopus(all_points_on_geodesics, memberships = None, meaningful_geodesi
     and meaningful geodesics, and save the resulting plot.
 
     Parameters:
-    - all_points_on_geodesics (torch.Tensor): Tensor of shape (num_datapoints, num_clusters, num_aux_points_on_geodesics, latent_dimension) 
+    - geodesic_curve (torch.Tensor): Tensor of shape (num_datapoints, num_clusters, num_aux_points_on_geodesics, latent_dimension) 
       representing the geodesic segments.
     - memberships (torch.Tensor, optional): Tensor of shape (num_datapoints,) representing class memberships for each datapoint.
-    - meaningful_geodesics (torch.Tensor, optional): Tensor of geodesics to be overlaid for visualization.
     - saving_folder (str, optional): Folder path to save the plots.
     - suffix (int, optional): Frame index to append to the saved filename.
     - verbose (bool, optional): Whether to display the plot. If False, the plot will be closed after saving.
@@ -216,10 +225,10 @@ def plot_octopus(all_points_on_geodesics, memberships = None, meaningful_geodesi
     Returns:
     - None
     """
-    # Detach all_points_on_geodesics from computation graph to avoid accidental gradients.
-    all_points_on_geodesics = all_points_on_geodesics.detach() #shape (num_datapoints, num_clusters, num_aux_points_on_geodesics,latent_dimension)
-    N = all_points_on_geodesics.shape[0] # num data points
-    K = all_points_on_geodesics.shape[1] # num clusters
+    # Detach geodesic_curve from computation graph to avoid accidental gradients.
+    geodesic_curve = geodesic_curve.detach() #shape (num_datapoints, num_clusters, num_aux_points_on_geodesics,latent_dimension)
+    N = geodesic_curve.shape[0] # num data points
+    K = geodesic_curve.shape[1] # num clusters
     if xlim != None:
         plt.xlim(-xlim, xlim)
     if ylim != None:
@@ -230,23 +239,26 @@ def plot_octopus(all_points_on_geodesics, memberships = None, meaningful_geodesi
             #    color = "blue"
             #else:
             color = "orange"
-            plt.plot(all_points_on_geodesics[i,j,:,0], all_points_on_geodesics[i,j,:,1],'-',marker='o', c = color, markersize=3)
+            plt.plot(geodesic_curve[i,j,:,0], geodesic_curve[i,j,:,1],'-',marker='o', c = color, markersize=3)
     # plot centers
-    centers = all_points_on_geodesics[0,:,-1,:]
+    centers = geodesic_curve[0,:,-1,:]
     # plot the datapoints (the starting points on all the geodesics, colored by memberships if specified):
     if memberships!= None:
         num_classes = int(memberships.max().item()) + 1
         plt.scatter(centers[:,0], centers[:,1], c=torch.arange(num_classes), marker='*', edgecolor='black',  cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 170,zorder = 12)
-        plt.scatter(all_points_on_geodesics[:,0,0,0], all_points_on_geodesics[:,0,0,1], c=memberships, marker='o', edgecolor='none', cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
-    else:
-        plt.scatter(centers[:,0], centers[:,1], c="red", label = "centers", marker='*', edgecolor='black', s = 170,zorder = 10)
-        plt.scatter(all_points_on_geodesics[:,0,0,0], all_points_on_geodesics[:,0,0,1], c="green", label = "centers", marker='o', s = 30,zorder = 10)
-    if meaningful_geodesics != None:
-        num_classes = int(memberships.max().item()) + 1
+        plt.scatter(geodesic_curve[:,0,0,0], geodesic_curve[:,0,0,1], c=memberships, marker='o', edgecolor='none', cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
+        # recompute the geodesics to nearest centroids
+        batch_indices = torch.arange(N) # this is needed, since   geodesic_curve[:, cluster_index_of_each_point, :, :] will produce a tensor of shape (N,N,step_count,d)
+        # pick only geodesics connecting points to cluster relevant centroids where the points are assigned
+        geodesics2nearestcentroids = geodesic_curve[batch_indices, memberships, :, :].detach() # shape (N,step_count,d)
+        # color the geodesics
         cmap = ricci_regularization.discrete_cmap(num_classes, 'jet')  # Define your colormap
         colors = cmap(memberships.cpu().numpy())  # Map memberships to colors
         for i in range(N):
-            plt.plot(meaningful_geodesics[i,:,0], meaningful_geodesics[i,:,1], c=colors[i], zorder = 10)
+            plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], zorder = 10)
+    else:
+        plt.scatter(centers[:,0], centers[:,1], c="red", label = "centers", marker='*', edgecolor='black', s = 170,zorder = 10)
+        plt.scatter(geodesic_curve[:,0,0,0], geodesic_curve[:,0,0,1], c="green", label = "centers", marker='o', s = 30,zorder = 10)
     # save images
     if saving_folder != None:
         if suffix != None:
@@ -255,3 +267,150 @@ def plot_octopus(all_points_on_geodesics, memberships = None, meaningful_geodesi
         plt.close()
     plt.show()
     return  
+
+def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels, 
+                                  selected_labels, plot_title='', verbose=True, 
+                                  save_plot=True, saving_folder=None,
+                                  file_saving_name=None):
+    # Manifold plot for all points with selected labels
+    plt.figure(figsize=(8, 6))
+    scatter = plt.scatter(encoded_points2plot[:, 0], encoded_points2plot[:, 1], 
+                        c=encoded_points_labels, cmap='jet', alpha=0.7)
+    # Set plot limits to [-pi, pi] for both dimensions
+    plt.xlim(-torch.pi, torch.pi)
+    plt.ylim(-torch.pi, torch.pi)
+    # Add legend
+    handles = [plt.Line2D([0], [0], marker='o', color='w', 
+                markerfacecolor=scatter.cmap(scatter.norm(label)), markersize=8) 
+            for label in selected_labels]
+    plt.legend(handles, selected_labels, title="Ground Truth Labels")
+    plt.title(plot_title)
+    if save_plot==True:
+        plt.savefig(f"{saving_folder}/{file_saving_name}.pdf",bbox_inches='tight', format="pdf")
+        print(f"manifold plot saved as{saving_folder}/{file_saving_name}.pdf")
+    if verbose==True:
+        plt.show()
+
+# Decision boundary plot
+def plot_knn_decision_boundary(encoded_points, labels4coloring, grid_resolution = 100, neighbours_number = 7,verbose=True, 
+        save_plot=True, saving_folder=None, file_saving_name=None, cmap_points='jet',cmap_background='coolwarm'):
+    """
+    Plots the decision boundary of a k-Nearest Neighbors (k-NN) classifier in a 2D latent space.
+
+    Parameters:
+    - encoded_points: Tensor of shape (N, 2), representing data points in a 2D latent space.
+    - labels4coloring: Tensor of shape (N,), representing class labels of encoded points.
+    - grid_resolution: Number of points per axis to create a uniform grid.
+    - neighbours_number: Number of neighbors to consider in k-NN classification.
+    - verbose: If True, displays the plot.
+    - save_plot: If True, saves the plot as a PDF file.
+    - saving_folder: Directory where the plot should be saved (if save_plot is True).
+    - file_saving_name: Name of the saved plot file.
+    - cmap_points: Colormap for original data points.
+    - cmap_background: Colormap for decision boundary regions.
+
+    Steps:
+    1. Generate a uniform grid of points covering the range [-pi, pi]².
+    2. Compute the Euclidean distances between grid points and encoded data points.
+    3. Determine the k nearest neighbors for each grid point.
+    4. Assign cluster labels to grid points based on majority vote from neighbors.
+    5. Plot the decision boundary along with the original data points.
+    """
+    # 1. Create a dense uniform grid in [-pi, pi]^2
+    x_vals = torch.linspace(-torch.pi, torch.pi, grid_resolution)
+    y_vals = torch.linspace(-torch.pi, torch.pi, grid_resolution)
+    grid_x, grid_y = torch.meshgrid(x_vals, y_vals, indexing="ij")
+    grid_points = torch.stack([grid_x.flatten(), grid_y.flatten()], dim=1)  # Shape: (grid_size^2, 2)
+
+    # 2. Compute pairwise Euclidean distances between grid points and encoded data
+    # (||x - y||^2 = (x1 - y1)^2 + (x2 - y2)^2)
+    dists = torch.cdist(grid_points, encoded_points)  # Shape: (grid_size^2, N_encoded)
+
+    # 3. Find the indices of the k=neighbours_number nearest neighbors
+    _, nn_indices = torch.topk(dists, k=neighbours_number, largest=False, dim=1)  # Get indices of k=neighbours_number nearest neighbors
+
+    # 4. Assign cluster labels by majority vote
+    nn_labels = labels4coloring[nn_indices]  # Retrieve labels of nearest neighbors
+    grid_labels, _ = torch.mode(nn_labels, dim=1)  # Majority vote
+
+    # 5. Plot results
+    plt.figure(figsize=(8, 6))
+
+    # Plot the grid colored by assigned cluster
+    plt.scatter(grid_points[:, 0], grid_points[:, 1], c=grid_labels, cmap=cmap_background, alpha=0.3, marker='s', s=10)
+
+    # Overlay original encoded points
+    plt.scatter(encoded_points[:, 0], encoded_points[:, 1], c=labels4coloring, cmap=cmap_points, edgecolors='k', s=40)
+
+    # Set plot limits and labels
+    plt.xlim(-torch.pi, torch.pi)
+    plt.ylim(-torch.pi, torch.pi)
+    plt.xlabel("Latent Dimension 1")
+    plt.ylabel("Latent Dimension 2")
+    plt.title(f"{file_saving_name} via {neighbours_number}-NN")
+    if save_plot==True:
+        plt.savefig(f"{saving_folder}/{file_saving_name}.pdf",bbox_inches='tight', format="pdf")
+        print(f"Decision boundary plot saved as{saving_folder}/{file_saving_name}.pdf")
+    if verbose==True:
+        plt.show()
+
+
+
+#-----------------
+# Clustering evaluation F-measure
+# Function to compute the set of pairs in the same cluster
+def get_pairs(tensor):
+    """
+    Computes the set of index pairs where elements in the tensor have the same value.
+    
+    Parameters:
+    tensor (torch.Tensor): A 1D tensor containing elements for which index pairs need to be found.
+    
+    Returns:
+    set: A set of tuples representing index pairs (i, j) where tensor[i] == tensor[j].
+    """
+    index_map = {}
+    
+    # Store indices for each unique value
+    for idx, val in enumerate(tensor.tolist()):
+        if val not in index_map:
+            index_map[val] = []
+        index_map[val].append(idx)
+    
+    # Generate unique index pairs
+    pairs = set()
+    for indices in index_map.values():
+        if len(indices) > 1:
+            for i in range(len(indices)):
+                for j in range(i + 1, len(indices)):
+                    pairs.add((indices[i], indices[j]))
+    
+    return pairs
+
+def compute_f_measure(P_labels, Q_labels):
+    """
+    Computes the F-measure between two clusterings P and Q.
+    
+    Parameters:
+        P_labels (list or np.array or torch.tensor): Cluster labels for partition P.
+        Q_labels (list or np.array or torch.tensor): Cluster labels for partition Q.
+    
+    Returns:
+        float: The F-measure score in the range [0,1].
+    """
+    n = len(P_labels)
+    assert len(Q_labels) == n, "Partitions must have the same number of samples."
+    
+    P_pairs = get_pairs(P_labels)
+    Q_pairs = get_pairs(Q_labels)
+    
+    a = len(P_pairs & Q_pairs)  # Intersection
+    b = len(Q_pairs - P_pairs)  # Pairs in Q but not in P
+    c = len(P_pairs - Q_pairs)  # Pairs in P but not in Q
+    
+    # Compute F-measure
+    if 2 * a + b + c == 0:
+        return 1.0  # If both partitions have no pairs, they are identical
+    
+    F_measure = (2 * a) / (2 * a + b + c)
+    return F_measure
