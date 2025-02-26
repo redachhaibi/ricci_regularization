@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
 import ricci_regularization
 
@@ -292,14 +293,70 @@ def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels,
         plt.show()
 
 # Decision boundary plot
-def plot_knn_decision_boundary(encoded_points, labels4coloring, grid_resolution = 100, neighbours_number = 7,verbose=True, 
-        save_plot=True, saving_folder=None, file_saving_name=None, cmap_points='jet',cmap_background='coolwarm'):
+from scipy.interpolate import griddata
+def plot_knn_decision_boundary(encoded_points, labels_for_coloring, grid_resolution=100, 
+                               neighbours_number=7, interpolation_method='linear', verbose=True, save_plot=True, 
+                               saving_folder=None, file_saving_name=None, 
+                               cmap_points='jet', cmap_background='coolwarm'):
+    """
+    Plots a smoother decision boundary of a k-Nearest Neighbors (k-NN) classifier in a 2D latent space.
+    
+    This version uses `scipy.interpolate.griddata` to create a smoothly interpolated background.
+    """
+    # Convert tensors to numpy
+    encoded_points_np = encoded_points.numpy()
+    labels_for_coloring_np = labels_for_coloring.numpy()
+    
+    # Create a dense uniform grid in [-pi, pi]^2
+    x_vals = np.linspace(-np.pi, np.pi, grid_resolution)
+    y_vals = np.linspace(-np.pi, np.pi, grid_resolution)
+    grid_x, grid_y = np.meshgrid(x_vals, y_vals)
+    grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T
+    
+    # Compute pairwise Euclidean distances between grid points and encoded data
+    dists = np.linalg.norm(grid_points[:, None, :] - encoded_points_np[None, :, :], axis=2)
+    
+    # Find the indices of the k=neighbours_number nearest neighbors
+    nn_indices = np.argsort(dists, axis=1)[:, :neighbours_number]
+    
+    # Assign cluster labels by majority vote
+    nn_labels = labels_for_coloring_np[nn_indices]
+    grid_labels = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr=nn_labels)
+    
+    # Smooth interpolation using griddata
+    grid_labels_smooth = griddata(grid_points, grid_labels, (grid_x, grid_y), method=interpolation_method)
+    
+    # Plot results
+    plt.figure(figsize=(8, 6))
+    plt.contourf(grid_x, grid_y, grid_labels_smooth, levels=10, cmap=cmap_background, alpha=0.6)
+    
+    # Overlay original encoded points
+    plt.scatter(encoded_points_np[:, 0], encoded_points_np[:, 1], c=labels_for_coloring_np, cmap=cmap_points, edgecolors='k', s=40)
+    
+    # Set plot limits and labels
+    plt.xlim(-np.pi, np.pi)
+    plt.ylim(-np.pi, np.pi)
+    plt.xlabel("Latent Dimension 1")
+    plt.ylabel("Latent Dimension 2")
+    plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
+    
+    if save_plot:
+        plt.savefig(f"{saving_folder}/{file_saving_name}.pdf", bbox_inches='tight', format="pdf")
+        print(f"Decision boundary plot saved as {saving_folder}/{file_saving_name}.pdf")
+    
+    if verbose:
+        plt.show()
+
+#older version to be deprecated
+def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, grid_resolution = 100, 
+        neighbours_number = 7,verbose=True, save_plot=True, saving_folder=None, 
+        file_saving_name=None, cmap_points='jet',cmap_background='coolwarm'):
     """
     Plots the decision boundary of a k-Nearest Neighbors (k-NN) classifier in a 2D latent space.
 
     Parameters:
     - encoded_points: Tensor of shape (N, 2), representing data points in a 2D latent space.
-    - labels4coloring: Tensor of shape (N,), representing class labels of encoded points.
+    - labels_for_coloring: Tensor of shape (N,), representing class labels of encoded points.
     - grid_resolution: Number of points per axis to create a uniform grid.
     - neighbours_number: Number of neighbors to consider in k-NN classification.
     - verbose: If True, displays the plot.
@@ -330,7 +387,7 @@ def plot_knn_decision_boundary(encoded_points, labels4coloring, grid_resolution 
     _, nn_indices = torch.topk(dists, k=neighbours_number, largest=False, dim=1)  # Get indices of k=neighbours_number nearest neighbors
 
     # 4. Assign cluster labels by majority vote
-    nn_labels = labels4coloring[nn_indices]  # Retrieve labels of nearest neighbors
+    nn_labels = labels_for_coloring[nn_indices]  # Retrieve labels of nearest neighbors
     grid_labels, _ = torch.mode(nn_labels, dim=1)  # Majority vote
 
     # 5. Plot results
@@ -340,14 +397,14 @@ def plot_knn_decision_boundary(encoded_points, labels4coloring, grid_resolution 
     plt.scatter(grid_points[:, 0], grid_points[:, 1], c=grid_labels, cmap=cmap_background, alpha=0.3, marker='s', s=10)
 
     # Overlay original encoded points
-    plt.scatter(encoded_points[:, 0], encoded_points[:, 1], c=labels4coloring, cmap=cmap_points, edgecolors='k', s=40)
+    plt.scatter(encoded_points[:, 0], encoded_points[:, 1], c=labels_for_coloring, cmap=cmap_points, edgecolors='k', s=40)
 
     # Set plot limits and labels
     plt.xlim(-torch.pi, torch.pi)
     plt.ylim(-torch.pi, torch.pi)
     plt.xlabel("Latent Dimension 1")
     plt.ylabel("Latent Dimension 2")
-    plt.title(f"{file_saving_name} via {neighbours_number}-NN")
+    plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
     if save_plot==True:
         plt.savefig(f"{saving_folder}/{file_saving_name}.pdf",bbox_inches='tight', format="pdf")
         print(f"Decision boundary plot saved as{saving_folder}/{file_saving_name}.pdf")
