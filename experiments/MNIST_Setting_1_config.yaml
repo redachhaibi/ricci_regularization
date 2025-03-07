@@ -1,38 +1,38 @@
 architecture:
-  type: "TorusConvAE"                  # Type of architecture being used
-  latent_dim: 2                    # latent space dimension
-  input_dim: 784                   # input dimension
-  output_dim: 784                  # output dimension
-  weights_dtype: float32           # weights dtype
+  type: TorusAE                        # Type of architecture being used
+  input_dim: 784                       # Input dimension
+  latent_dim: 2                        # Latent space dimension
+  output_dim: 784                      # Output dimension
+  weights_dtype: float32               # Data type for model weights
+
+data_loader_settings:
+  batch_size: 128                      # Batch size 
+  random_seed: 0                       # Seed for random number generation
+  random_shuffling: false              # Flag to indicate whether to shuffle data randomly
+  split_ratio: 0.2                     # Ratio for splitting the data into training and validation
 
 dataset:
-  name:  "MNIST"
+  name: MNIST                          # Name of the dataset used
 
-experiment:        
-  weights_loaded_from: False       # Path to another experiment from which weights are loaded
-  name: "MNIST_Setting_1"             # number of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
-        
-training_mode:         
-  diagnostic_mode: False           # Diagnostic mode flag: printing all losses plots. 
-  compute_curvature: True         # Flag to indicate whether to compute curvature
-  compute_contractive_loss: False # Flag to indicate whether to compute contractive loss
-  OOD_regime: False 
-  curvature_computation_mode: "jacfwd"     # Out-of-distribution regime on/off flag
+experiment:
+  name: MNIST_Setting_1                # Name of the current experiment. Determines the folder name with experiment results in "../experiments/[experiment_name]"
+  weights_loaded_from: false           # Path to another experiment from which pre-trained AE weights are loaded. False if no weights of a pre-trained AE are loaded.
 
 loss_settings:
-  lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
-  lambda_unif: 0.0              # Weight for week convergence to uniform distribution in the loss function
-  lambda_curv: 1.0                 # Weight for curvature regularization
-  num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
-  eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
+  eps: 0.0                             # Regularization parameter for inverse of metric computation (involved in scalar curvature computation)
+  lambda_curv: 1.0                     # Weight for curvature regularization
+  lambda_recon: 1.0                    # Weight for reconstruction (mean squared) error in the loss function
+  lambda_unif: 0.0                     # Weight for weak convergence to uniform distribution in the loss function
+  num_moments: 4                       # Number of empirical moments of the distribution penalized in the loss function
 
-optimizer_settings:       
-  lr: 0.001                        # Learning rate for the optimizer
-  num_epochs: 40                   # Number of epochs for training
-  weight_decay: 0.0                # Weight decay for the optimizer
-       
-data_loader_settings:       
-  batch_size: 128                  # Batch size 
-  split_ratio: 0.2                 # Ratio for splitting the data into training and validation
-  random_shuffling: false          # Flag to indicate whether to shuffle data randomly
-  random_seed: 0                   # Seed for random number generation
+optimizer_settings:
+  lr: 0.001                            # Learning rate for the optimizer
+  num_epochs: 40                       # Number of epochs for training
+  weight_decay: 0.0                    # Weight decay for the optimizer
+
+training_mode:
+  OOD_regime: false                    # Out-of-distribution regime on/off flag
+  compute_contractive_loss: false      # Flag to indicate whether to compute contractive loss
+  compute_curvature: false             # Flag to indicate whether to compute curvature
+  curvature_computation_mode: jacfwd   # Mode used for curvature computation
+  diagnostic_mode: false               # Diagnostic mode flag: printing all loss plots

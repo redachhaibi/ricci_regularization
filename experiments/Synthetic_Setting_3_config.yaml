@@ -1,0 +1,56 @@
+architecture:
+  type: "TorusAE"                  # Type of architecture being used
+  # type = "TorusConvAE"           # Another type of architecture
+  latent_dim: 2                    # latent space dimension
+  input_dim: 784                   # input dimension
+  output_dim: 784                  # output dimension
+
+dataset:
+  name:  "Synthetic"
+  k: 3                             # number of classes
+  n: 18000                         # number of dataset points
+  D: 784                           # dataset dim
+  d: 2                             # intrinstic latent space dimention (by construction) 
+  shift_class: 0.                  # Deterministic shift  among means of different classes. Shifting in intrinsic dimension d.
+  interclass_variance: 0.1         # Interclass variance: how different classes are spread apart. After embedding into dimension D.
+  variance_of_classes: 1.          # Intra-class variance: how members of a certain class are spread (equal for each class). Set in intrinsic dimension d.
+        
+experiment:        
+  weights_loaded_from: False            # Flag indicating whether weights are loaded
+  name: "Synthetic_Setting_3"  # number of the current experiment
+        
+training_mode:         
+  diagnostic_mode: False            # Diagnostic mode flag: printing all losses plots. 
+  compute_curvature: True          # Flag to indicate whether to compute curvature
+  compute_contractive_loss: False # Flag to indicate whether to compute contractive loss
+  OOD_regime: False                 # Out-of-distribution regime on/off flag
+
+loss_settings:
+  lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
+  lambda_unif: 1.e-4               # Weight for week convergence to uniform distribution in the loss function
+  lambda_curv: 1.e-3               # Weight for curvature regularization
+  lambda_contractive_encoder: 0.0  # Weight for contractive encoder
+         
+  num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
+  delta_encoder: 0.0               # Threshold parameter for the contractive loss
+  eps: 0.0                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
+       
+optimizer_settings:       
+  lr: 0.001                        # Learning rate for the optimizer
+  num_epochs: 2                    # Number of epochs for training
+  weight_decay: 0.0                # Weight decay for the optimizer
+       
+data_loader_settings:       
+  batch_size: 128                  # Batch size 
+  split_ratio: 0.2                 # Ratio for splitting the data into training and validation
+  random_shuffling: false          # Flag to indicate whether to shuffle data randomly
+  random_seed: 0                   # Seed for random number generation
+       
+OOD_settings:       
+  T_ood: 20                        # Period of OOD penalization
+  n_ood: 5                         # Number of OOD samples per point
+  sigma_ood: 0.2                   # Sigma of OOD Gaussian samples
+  N_extr: 16                       # Batch size of extremal curvature points
+  r_ood: 0.001                     # Decay factor
+  OOD_w: 0.1                       # Weight on curvature in OOD sampling
+  start_ood: 0                     # number of batch after which the OOD_regime starts working

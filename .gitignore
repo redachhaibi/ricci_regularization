@@ -143,3 +143,10 @@ executed_notebooks/*
 #Playgrounds, unfinished notebooks
 ipynb/playgrounds/*
 ipynb/archive/*
+
+# Archived experiments
+experiments/archived_experiments/*
+
+# JSON and txt files with results
+*.json
+*.txt
