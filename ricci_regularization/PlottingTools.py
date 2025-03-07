@@ -1,6 +1,6 @@
-import torch
+import torch, math
 import numpy as np
-import torchvision
+import matplotlib
 import matplotlib.pyplot as plt
 
 def make_grid(numsteps, 
@@ -134,6 +134,13 @@ def plot_ae_outputs_selected(test_dataset,encoder,decoder,selected_labels = None
             ax.set_title('Reconstructed images', fontsize=6)
     return ax
 
+def discrete_cmap_upd(N, base_cmap=None):
+    """Create an N-bin discrete colormap from the given base colormap."""
+    base = plt.get_cmap(base_cmap)
+    color_list = base(np.linspace(0, 1, N))
+    cmap = matplotlib.colors.ListedColormap(color_list[:N], name=f"{base.name}_{N}")
+    return cmap
+
 # borrowed from https://gist.github.com/jakevdp/91077b0cae40f8f8244a
 def discrete_cmap(N, base_cmap=None, bright_colors = False):
     """Create an N-bin discrete colormap from the specified input map"""
@@ -156,7 +163,7 @@ def plot3losses(mse_train_list,uniform_train_list,curv_train_list):
     axes[0].set_ylabel('MSE')
     
     axes[1].semilogy(uniform_train_list, color = 'tab:olive')
-    axes[1].set_ylabel('Uniform loss')
+    axes[1].set_ylabel('Equidistribution loss')
     
     axes[2].semilogy(curv_train_list, color = 'tab:blue')
     axes[2].set_ylabel('Curvature')
@@ -274,72 +281,59 @@ def plotsmart(dictplots):
     return fig,axes
 
 
-def translate_dict(dict2print, include_curvature_plots = True, eps = 0):
+def translate_dict(dict_losses_to_plot, eps = 0):
     dictplots = {
     "plot1": {
         "yname_latex": "MSE",
         "data": {
-            "MSE": dict2print["MSE"]
+            "MSE": dict_losses_to_plot["MSE"]
         }
     },
     "plot2": {
-        "yname_latex": "$\mathcal{L}_\mathrm{unif}$",
+        "yname_latex": "$\mathcal{L}_\mathrm{equi}$",
         "data": {
-            "$\widehat\mathcal{L}_\mathrm{unif}$": dict2print["Uniform"]
+            "$\widehat\mathcal{L}_\mathrm{equi}$": dict_losses_to_plot["Equidistribution"]
         }
-    }
-    }
-    if include_curvature_plots == True:
-        dictplots["plot3"] = {
-            "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
-            "data": {
-                "$\widehat\mathcal{L}_\mathrm{curv}$": dict2print["Curvature"]
-            }
-        }
-        dictplots["plot4"] = {
-            "yname_latex": "$R^2$",
-            "data": {
-                "mean": dict2print["curv_squared_mean"],
-                "max": dict2print["curv_squared_max"]
-            }
-        }
-    dict2 = {
-
+    },
+    "plot3": {
+        "yname_latex": "$\mathcal{L}_\mathrm{contractive}$",
+        "data": {"$\widehat\mathcal{L}_\mathrm{contractive}$": dict_losses_to_plot.get("Contractive")}
+    },
+    "plot4": {
+        "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
+        "data": {"$\widehat\mathcal{L}_\mathrm{curv}$": dict_losses_to_plot.get("Curvature")}
+    },
     "plot5": {
         "yname_latex": "$\det(g)$",
-        "data": {
-            "mean": dict2print["g_det_mean"],
-            "max": dict2print["g_det_max"],
-            "min": dict2print["g_det_min"]
-        }
+        "data": {k: dict_losses_to_plot.get(k) for k in ["g_det_mean", "g_det_max", "g_det_min"]}
     },
-
     "plot6": {
-        "yname_latex": r"$\|g_{reg}^{-1}\|_F, \ \varepsilon = $" + f"{eps}",
-        "data": {
-            "mean": dict2print["g_inv_norm_mean"],
-            "max": dict2print["g_inv_norm_max"]
-        }
+        "yname_latex": rf"$\|g_{{reg}}^{{-1}}\|_F, \ \varepsilon = {eps}$",
+        "data": {k: dict_losses_to_plot.get(k) for k in ["g_inv_norm_mean", "g_inv_norm_max"]}
     },
-
     "plot7": {
         "yname_latex": r"$\|\nabla \Psi \|^2_F = \mathrm{tr} (g) $",
-        "data": {
-            "mean": dict2print["decoder_jac_norm_mean"],
-            "max": dict2print["decoder_jac_norm_max"]
-        }
+        "data": {k: dict_losses_to_plot.get(k) for k in ["decoder_jac_norm_mean", "decoder_jac_norm_max"]}
     },
-
     "plot8": {
         "yname_latex": r"$\|\nabla \Phi \|^2_F $",
-        "data": {
-            "mean": dict2print["encoder_jac_norm_mean"],
-            "max": dict2print["encoder_jac_norm_max"]
-        }
+        "data": {k: dict_losses_to_plot.get(k) for k in ["encoder_jac_norm_mean", "encoder_jac_norm_max"]}
+    },
+    "plot9": {
+            "yname_latex": "$R^2$", 
+            "data": {k: dict_losses_to_plot.get(k) for k in ["curv_squared_mean", "curv_squared_max"]}
     }
     }
-    
-    dictplots = {**dictplots,**dict2}
+    # Merge and filter out empty plots
+    # Iterate over dict2 and collect the keys to remove
+    keys_to_remove = []
+    for key, values in dictplots.items():
+        if None in values["data"].values():  # Check if there are any None values in the "data"
+            keys_to_remove.append(key)  # Add the key to the list for later removal
+
+    # Remove the keys after iteration
+    for key in keys_to_remove:
+        dictplots.pop(key, None)
     return dictplots
 
 def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
@@ -366,7 +360,7 @@ def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
             else:
                 linestyle = 'solid'
             for j in range(3):
-                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='same') / sum(win[j]), color = newcolor,label = legend,ls = linestyle)
+                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='valid') / sum(win[j]), color = newcolor,label = legend,ls = linestyle)
                 #axes[i,j].semilogy(curve, color = newcolor,label = legend,ls = linestyle)
                 axes[i,j].set_xlabel('Batches')
             #end for
@@ -377,8 +371,94 @@ def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
     plt.show()
     return fig,axes
 
-def point_plot(encoder, data: torch.utils.data.dataset.Subset, dataset_name, batch_idx, config, device,
-               show_title=True, colormap='jet', s=40, draw_grid=False, figsize=(9, 9)):
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+def point_plot(encoder, data_loader, batch_idx, config,
+        show_title=True, colormap='jet', normalize_to_unit_square = False, 
+        s=40, draw_grid=False, figsize=(9, 9)):
+    # Plotting the latent embedding of data taken from dataloader
+    # using the encoder function in "encoder"
+    # params of the dataset taken from YAML file "config"
+    # Extract labels and data from the dataset
+    #labels = data[:][1]
+    #data = data[:][0]
+
+    data_tensor_list = []
+    labels_list =[]
+    for batch_data_labels in data_loader:
+        batch_data, batch_labels = batch_data_labels
+        data_tensor_list.append(batch_data)
+        labels_list.append(batch_labels)
+    data_tensor = torch.cat(data_tensor_list)
+    labels = torch.cat(labels_list)
+    
+    D = config["architecture"]["input_dim"]
+    dataset_name = config["dataset"]["name"]
+
+    # Perform encoding
+    with torch.no_grad():
+        data_tensor = data_tensor.view(-1, D)  # reshape the data (flatten)
+        encoded_data = encoder(data_tensor).cpu()
+
+    # Convert to numpy for plotting
+    encoded_data_to_plot = encoded_data.numpy()
+    labels = labels.numpy()
+    selected_labels = np.unique(labels)
+
+    #plt.rcParams.update({'font.size': 20})
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # checking if normalization of plotting scale is needed
+    if normalize_to_unit_square == True:
+        encoded_data = encoded_data/torch.pi
+    else:
+        ax.set_ylim(-math.pi, math.pi)
+        ax.set_xlim(-math.pi, math.pi)
+        ax.set_yticks([-3., -2., -1., 0., 1., 2., 3.])
+        ax.set_xticks([-3., -2., -1., 0., 1., 2., 3.])
+    
+    # Create scatter plot
+    if dataset_name == "Swissroll":
+        sc = ax.scatter(encoded_data_to_plot[:, 0], encoded_data_to_plot[:, 1], s=s, c=labels, alpha=1.0, 
+                        marker='o', edgecolor='none', cmap = colormap)
+    elif dataset_name in ["MNIST01", "MNIST_subset"]:
+        k = len(config["dataset"]["selected_labels"])
+        norm = plt.Normalize(vmin=min(labels), vmax=max(labels))
+        sc = ax.scatter(encoded_data_to_plot[:, 0], encoded_data_to_plot[:, 1], s=s, c=labels, alpha=1.0, 
+                        marker='o', edgecolor='none', 
+                        cmap=colormap)
+                        #cmap = discrete_cmap_upd(k, colormap))
+        # create discrete colorbar
+        cmap = plt.get_cmap(colormap)
+        discrete_cmap = mcolors.ListedColormap([cmap(norm(label)) for label in selected_labels])
+        # Create a ScalarMappable for the discrete colorbar
+        sm = plt.cm.ScalarMappable(cmap=discrete_cmap, norm=norm)
+        sm.set_array([])  # No need for a full color scale
+        tick_positions = np.linspace(selected_labels.min(),selected_labels.max(),k)# fix the positions of top and bottom ticks.
+        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing = "uniform")
+        cbar.set_label('Cluster Label')
+        cbar.set_ticklabels(selected_labels)  # Show only unique labels
+
+    # Add title if required
+    if show_title:
+        ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')
+    
+    # Enable grid if required
+    ax.grid(draw_grid)
+
+    # Adjust layout to prevent elements from being cut off
+    fig.tight_layout()
+
+    # Return the figure object
+    return fig
+
+# this function will be deprecated
+def point_plot_old(encoder, data: torch.utils.data.dataset.Subset, dataset_name, 
+               batch_idx, config, device, show_title=True, colormap='jet', 
+               s=40, draw_grid=False, figsize=(9, 9)):
     # Plotting the latent embedding of "data" using the encoder function in "encoder"
     # params of the dataset taken from YAML file "config"
     # Extract labels and data from the dataset
@@ -387,6 +467,9 @@ def point_plot(encoder, data: torch.utils.data.dataset.Subset, dataset_name, bat
     if dataset_name == "Synthetic":
         labels = data.dataset.tensors[1]
         data = data.dataset.tensors[0]
+    elif dataset_name in ["MNIST01", "MNIST_subset"]:
+        data = data.data.to(torch.float32)/255.
+        labels = data.targets
     else:
         labels = data.targets
         data = data.data
@@ -428,6 +511,60 @@ def point_plot(encoder, data: torch.utils.data.dataset.Subset, dataset_name, bat
         norm = BoundaryNorm(bounds, discrete_cmap(k, colormap).N)
         cbar = plt.colorbar(sc, boundaries=bounds, norm=norm, ticks=np.arange(k))
 
+    # Add title if required
+    if show_title:
+        ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')
+    
+    # Enable grid if required
+    ax.grid(draw_grid)
+
+    # Adjust layout to prevent elements from being cut off
+    fig.tight_layout()
+
+    # Return the figure object
+    return fig
+
+# this function is used for plotting while training
+def point_plot_fast(encoded_points,labels, 
+               batch_idx, config, show_title=True, colormap='jet', 
+               s=40, draw_grid=False, figsize=(9, 9)):
+    # Plotting the latent embedding of "data" using the encoder function in "encoder"
+    # params of the dataset taken from YAML file "config"
+    dataset_name = config["dataset"]["name"]
+
+    #plt.rcParams.update({'font.size': 20})
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=figsize)    
+    # Create scatter plot
+    if dataset_name == "Swissroll":
+        sc = ax.scatter(encoded_points[:, 0], encoded_points[:, 1], s=s, c=labels, alpha=1.0, marker='o', 
+                edgecolor='none', cmap = colormap)
+    elif dataset_name in["MNIST_subset", "MNIST01","MNIST","Synthetic"]:
+        selected_labels = torch.tensor(config["dataset"]["selected_labels"])
+        if config["dataset"]["name"] == "MNIST":
+            selected_labels = torch.arange(10)
+        elif config["dataset"]["name"] == "Synthetic":
+            selected_labels = torch.arange(config["dataset"]["k"])
+        k = len(selected_labels)
+        mask = torch.isin(labels, torch.tensor(selected_labels))
+        # Apply the mask to filter data and labels
+        filtered_data = encoded_points[mask]
+        filtered_labels = labels[mask]
+        sc = ax.scatter(filtered_data[:, 0], filtered_data[:, 1], s=s, c=filtered_labels, 
+                        alpha=1.0, marker='o', 
+                edgecolor='none', cmap = colormap)
+        
+        cmap = plt.get_cmap(colormap)
+        norm = plt.Normalize(vmin=torch.min(selected_labels).item(),
+                              vmax=torch.max(selected_labels).item())
+        discrete_cmap = mcolors.ListedColormap([cmap(norm(label)) for label in selected_labels.tolist()])
+        # Create a ScalarMappable for the discrete colorbar
+        sm = plt.cm.ScalarMappable(cmap=discrete_cmap, norm=norm)
+        sm.set_array([])  # No need for a full color scale
+        tick_positions = np.linspace(selected_labels.min(),selected_labels.max(),k)# fix the positions of top and bottom ticks.
+        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing = "uniform")
+        cbar.set_label('Cluster Label')
+        cbar.set_ticklabels(selected_labels.tolist())  # Show only unique labels
     # Add title if required
     if show_title:
         ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')

@@ -1,12 +1,91 @@
 import json
 from sklearn import datasets
-import torch
+import torch, torchvision
 from torch.utils.data import Subset
 from torchvision import datasets, transforms
 import sklearn
 import ricci_regularization
 
 def get_dataloaders(dataset_config: dict, data_loader_config: dict, dtype: str):
+    datasets_root = '../../datasets/'  # Root directory for datasets
+
+    # Load dataset based on the name provided in dataset_config
+    torch.manual_seed(data_loader_config["random_seed"])  # Set the random seed for reproducibility
+
+    # Define the transformation: Convert to tensor and change the type to float64
+    transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),  # Converts the PIL image to torch.Tensor (default: torch.float32)
+            torchvision.transforms.Lambda(lambda x: x.to(dtype))  # Convert the tensor to torch.float64
+        ])
+    if dataset_config["name"] == "MNIST":
+        # Load the MNIST dataset
+        dataset = datasets.MNIST(root=datasets_root, train=True, transform=transform, download=True)
+        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transform, download=False)
+
+    elif dataset_config["name"] in ["MNIST_subset","MNIST01"]:
+        # Load the full MNIST dataset
+        train_dataset = torchvision.datasets.MNIST(root=datasets_root, train=True, transform=transform, download=True)
+        test_dataset  = torchvision.datasets.MNIST(root=datasets_root, train=False, transform=transform, download=False)
+        # Selecting specific labels in train dataset
+        num_points_per_label = dataset_config["num_points_per_label"]
+        indices_random = [] # list to store randomely selected indices 
+        selected_labels = dataset_config["selected_labels"]  # Get the list of labels to select
+        for label in selected_labels:
+            mask = torch.isin(train_dataset.targets, torch.tensor(label))
+            indices = torch.where(mask)[0]
+            indices_random.append(indices[torch.randperm(len(indices))][:num_points_per_label])
+        indices_random = torch.cat(indices_random)
+        # permuting concateneted indices
+        indices_random = indices_random[torch.randperm(len(indices_random))]
+        dataset = torch.utils.data.Subset(train_dataset, indices_random)
+        sizeof_dataset = len(dataset)
+        # Split the dataset into training and testing sets based on split_ratio
+        train_data, test_data = torch.utils.data.random_split(dataset, [sizeof_dataset - int(sizeof_dataset * data_loader_config["split_ratio"]), int(sizeof_dataset * data_loader_config["split_ratio"])])
+
+    elif dataset_config["name"] == "Synthetic":
+        # Generate a synthetic dataset using specified parameters
+        my_dataset = ricci_regularization.SyntheticDataset(
+            k=dataset_config["k"], 
+            n=dataset_config["n"],
+            d=dataset_config["d"], 
+            D=dataset_config["D"], 
+            shift_class=dataset_config["shift_class"],
+            interclass_variance=dataset_config["interclass_variance"], 
+            variance_of_classes=dataset_config["variance_of_classes"]
+        )
+        dataset = my_dataset.create  # Create the synthetic dataset
+    elif dataset_config["name"] == "Swissroll":
+        # Generate the Swissroll dataset
+        train_dataset = sklearn.datasets.make_swiss_roll(n_samples=dataset_config["n"], 
+            noise=dataset_config["swissroll_noise"],random_state = data_loader_config["random_seed"])
+        
+        sr_points = torch.from_numpy(train_dataset[0]).to(torch.float32)  # Convert points to tensor
+        sr_colors = torch.from_numpy(train_dataset[1]).to(torch.float32)  # Convert colors to tensor
+        from torch.utils.data import TensorDataset
+        dataset = TensorDataset(sr_points, sr_colors)  # Create a TensorDataset from points and colors
+    
+    m = len(dataset)  # Get the length of the training dataset
+    # Split the dataset into training and testing sets based on split_ratio
+    train_data, test_data = torch.utils.data.random_split(dataset, [m - int(m * data_loader_config["split_ratio"]), int(m * data_loader_config["split_ratio"])])
+
+    # Create data loaders for training and testing sets
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=data_loader_config["batch_size"])
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=data_loader_config["batch_size"], shuffle=data_loader_config["random_shuffling"])
+    
+    # Return a dictionary containing the training and testing data loaders
+    loaders = {
+        "train_loader": train_loader,
+        "test_loader": test_loader
+    }
+    if dataset_config["name"] in ["MNIST01","MNIST","MNIST_subset"]:
+        loaders["test_dataset"] = test_dataset
+        loaders["test_dataset_partial"] = test_dataset
+    else:
+        loaders["test_dataset"] = test_data
+    return loaders
+
+# old function to be deprecated
+def get_dataloaders_old(dataset_config: dict, data_loader_config: dict, dtype: str):
     datasets_root = '../../datasets/'  # Root directory for datasets
 
     # Load dataset based on the name provided in dataset_config
@@ -26,13 +105,23 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict, dtype: str):
     elif dataset_config["name"] == "MNIST01":
         # Load the full MNIST dataset
         full_mnist_dataset = datasets.MNIST(root=datasets_root, train=True, transform=transforms.ToTensor(), download=True)
-        test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+        full_test_dataset  = datasets.MNIST(root=datasets_root, train=False, transform=transforms.ToTensor(), download=False)
+        # Selecting specific labels in train dataset
         mask = (full_mnist_dataset.targets == -1)  # Initialize mask to select specific labels
         selected_labels = dataset_config["selected_labels"]  # Get the list of labels to select
         for label in selected_labels:
             mask = mask | (full_mnist_dataset.targets == label)  # Update mask for each selected label
         indices01 = torch.where(mask)[0]  # Get indices of the selected labels
-        dataset = Subset(full_mnist_dataset, indices01)  # Create a subset of MNIST with the selected labels
+        dataset = Subset(full_mnist_dataset, indices01)  # Create a subset of MNIST with the selected labels 
+        # Selecting specific labels in test dataset
+        """
+        mask_test = (full_test_dataset.targets == -1)  # Initialize mask to select specific labels
+        for label in selected_labels:
+            mask_test = mask_test | (full_test_dataset.targets == label)  # Update mask for each selected label
+        indices01_test = torch.where(mask_test)[0]  # Get indices of the selected labels
+        test_dataset = Subset(full_test_dataset, indices01_test)  # Create a subset of MNIST with the selected labels
+        """
+        test_dataset = full_test_dataset
     elif dataset_config["name"] == "Synthetic":
         # Generate a synthetic dataset using specified parameters
         my_dataset = ricci_regularization.SyntheticDataset(
@@ -81,11 +170,11 @@ def get_tuned_nn(config: dict, additional_path = ''):
 
     try:
         # Attempt to retrieve the architecture type from the configuration dictionary
-        architecture_type = config["architecture"]["name"]
+        architecture_type = config["architecture"]["type"]
     except KeyError:
         # Default to "TorusAE" if the architecture type is not specified
         architecture_type = "TorusAE"
-    
+    print("Chosen architecture:",architecture_type)
     # Initialize the neural network based on the specified architecture type
     if architecture_type == "TorusAE":
         torus_ae = ricci_regularization.Architectures.TorusAE(x_dim=input_dim, h_dim1=512, h_dim2=256, z_dim=latent_dim)

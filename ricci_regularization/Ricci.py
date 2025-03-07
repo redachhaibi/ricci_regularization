@@ -60,7 +60,7 @@ def Sc_g_jacfwd (u, function, eps = 0.0):
     Sc = torch.einsum('ab,ab',g_inv,Ricci)
     return Sc, g
 # vectorization
-Sc_jacfwd_vmap = torch.func.vmap(Sc_g_jacfwd)
+Sc_g_jacfwd_vmap = torch.func.vmap(Sc_g_jacfwd)
 
 # computing the loss
 def curvature_loss_jacfwd (points, function, eps = 0.0):
@@ -291,7 +291,8 @@ def my_fun_lobachevsky(u, c=0.01):
     output = output.flatten()
     return output
 
-
+#----------------
+# the following is not used
 # as a class!
 class RiemannianGeometry():
     def __init__(self, latent_space_dim, function, AD_method, eps = 0):

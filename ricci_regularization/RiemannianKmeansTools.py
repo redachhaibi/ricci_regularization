@@ -115,12 +115,15 @@ def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics,
     basis = geodesic_solver.schauder_bases["zero_boundary"]["basis"]
     step_count = basis.shape[0]
 
-    linear_curve = construct_interpolation_points_on_segments_connecting_centers2encoded_data(starting_points=starting_points, final_points=final_points,num_aux_points=step_count, cut_off_ends=False)
+    linear_curve = construct_interpolation_points_on_segments_connecting_centers2encoded_data(starting_points=starting_points, 
+            final_points=final_points,num_aux_points=step_count, 
+            cut_off_ends=False)
     
     geodesic_curve = linear_curve + torch.einsum("sn,bend->besd", basis, parameters)
     return geodesic_curve
 
-def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, reduction = "sum"):
+def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
+                   reduction = "sum", device = "cuda"):
     """
     Computes the energy of geodesic curves using finite differences.
 
@@ -151,6 +154,7 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
         geodesic_curve = geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points)
     elif mode == "Schauder":
         geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
+    geodesic_curve = geodesic_curve.to(device)
     # decode the geodesics
     decoded_geodesic_curve = decoder(geodesic_curve)
     # Compute energy (finite differences)
@@ -162,7 +166,8 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
     # Warning! by default the outpiut is the single scalar, i.e the sum of all the energies
     return energy
 
-def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, reduction="none"):
+def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
+                    reduction="none", device = "cuda"):
     """
     Computes the lengths of geodesic curves in Euclidean space.
 
@@ -192,6 +197,7 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
         geodesic_curve = geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points)
     elif mode == "Schauder":
         geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
+    geodesic_curve = geodesic_curve.to(device)
     decoded_geodesic_curve = decoder(geodesic_curve)
     tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:]
     if reduction == "none":
@@ -294,10 +300,14 @@ def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels,
 
 # Decision boundary plot
 from scipy.interpolate import griddata
-def plot_knn_decision_boundary(encoded_points, labels_for_coloring, grid_resolution=100, 
-                               neighbours_number=7, interpolation_method='linear', verbose=True, save_plot=True, 
-                               saving_folder=None, file_saving_name=None, 
-                               cmap_points='jet', cmap_background='coolwarm'):
+def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
+        selected_labels = None, 
+        grid_resolution=100, contour_levels_count=10, neighbours_number=7, 
+        distance_computation_mode = "torus",interpolation_method='nearest',
+        background_opacity = 0.5, points_size = 50,
+        verbose=True, plot_title=None,save_plot=True, 
+        saving_folder=None, file_saving_name=None, 
+        cmap_points='coolwarm', cmap_background='coolwarm'):
     """
     Plots a smoother decision boundary of a k-Nearest Neighbors (k-NN) classifier in a 2D latent space.
     
@@ -306,16 +316,33 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring, grid_resolut
     # Convert tensors to numpy
     encoded_points_np = encoded_points.numpy()
     labels_for_coloring_np = labels_for_coloring.numpy()
-    
+    if selected_labels == None:
+        # mapping all labels to 0,1,2...,k-1 with preserving the order
+        _, labels_for_coloring_np = np.unique(labels_for_coloring_np, return_inverse=True)
+    else:
+        # Original tensor with values 0, 1, 2
+        _, labels_for_coloring_np = np.unique(labels_for_coloring_np, return_inverse=True)
+        # Mapping: 0 -> 1, 1 -> 5, 2 -> 8
+        mapping = torch.tensor(selected_labels)
+        # Apply mapping
+        labels_for_coloring_np = mapping[labels_for_coloring_np]
     # Create a dense uniform grid in [-pi, pi]^2
     x_vals = np.linspace(-np.pi, np.pi, grid_resolution)
     y_vals = np.linspace(-np.pi, np.pi, grid_resolution)
     grid_x, grid_y = np.meshgrid(x_vals, y_vals)
     grid_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T
     
-    # Compute pairwise Euclidean distances between grid points and encoded data
-    dists = np.linalg.norm(grid_points[:, None, :] - encoded_points_np[None, :, :], axis=2)
-    
+    # 2. Compute pairwise Euclidean distances between grid points and encoded data
+    # if distance_mode == "torus"
+    # (||x - y||^2 = (x1 - y1)^2 + (x2 - y2)^2)
+    # or using torus periodicity
+    if distance_computation_mode =="plane":
+        dists = torch.cdist(torch.from_numpy(grid_points), encoded_points)  # Shape: (grid_size^2, N_encoded)
+    elif distance_computation_mode == "torus":
+        coordinate_wise_distances = torch.abs(torch.from_numpy(grid_points)[:,None,:] - encoded_points_np[None,:,:]) #shape (grid_size^2, N_encoded, dim)
+        coordinate_wise_distances_torus = torch.min(coordinate_wise_distances, 2*torch.pi - coordinate_wise_distances)
+        dists = coordinate_wise_distances_torus.norm(dim = 2) # Shape: (grid_size^2, N_encoded)
+    dists = dists.numpy()
     # Find the indices of the k=neighbours_number nearest neighbors
     nn_indices = np.argsort(dists, axis=1)[:, :neighbours_number]
     
@@ -328,29 +355,38 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring, grid_resolut
     
     # Plot results
     plt.figure(figsize=(8, 6))
-    plt.contourf(grid_x, grid_y, grid_labels_smooth, levels=10, cmap=cmap_background, alpha=0.6)
+    plt.contourf(grid_x, grid_y, grid_labels_smooth, levels=contour_levels_count, cmap=cmap_background, alpha=background_opacity)
     
     # Overlay original encoded points
-    plt.scatter(encoded_points_np[:, 0], encoded_points_np[:, 1], c=labels_for_coloring_np, cmap=cmap_points, edgecolors='k', s=40)
+    plt.scatter(encoded_points_np[:, 0], encoded_points_np[:, 1], 
+                c=labels_for_coloring_np, cmap=cmap_points, edgecolors='k', 
+                s=points_size, alpha=1.0)
     
     # Set plot limits and labels
     plt.xlim(-np.pi, np.pi)
     plt.ylim(-np.pi, np.pi)
     plt.xlabel("Latent Dimension 1")
     plt.ylabel("Latent Dimension 2")
-    plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
-    
-    if save_plot:
+    if plot_title==None:
+        plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
+    else:
+        plt.title(plot_title)
+    if save_plot==True:
         plt.savefig(f"{saving_folder}/{file_saving_name}.pdf", bbox_inches='tight', format="pdf")
         print(f"Decision boundary plot saved as {saving_folder}/{file_saving_name}.pdf")
     
     if verbose:
         plt.show()
+    return
 
 #older version to be deprecated
-def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, grid_resolution = 100, 
-        neighbours_number = 7,verbose=True, save_plot=True, saving_folder=None, 
-        file_saving_name=None, cmap_points='jet',cmap_background='coolwarm'):
+def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, 
+        grid_resolution = 100, 
+        neighbours_number = 7, distance_computation_mode = "torus",
+        verbose=True, plot_title=None, 
+        save_plot=True, saving_folder=None, 
+        file_saving_name=None, cmap_points='jet',
+        cmap_background='coolwarm'):
     """
     Plots the decision boundary of a k-Nearest Neighbors (k-NN) classifier in a 2D latent space.
 
@@ -380,9 +416,15 @@ def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, gr
     grid_points = torch.stack([grid_x.flatten(), grid_y.flatten()], dim=1)  # Shape: (grid_size^2, 2)
 
     # 2. Compute pairwise Euclidean distances between grid points and encoded data
+    # if distance_mode == "torus"
     # (||x - y||^2 = (x1 - y1)^2 + (x2 - y2)^2)
-    dists = torch.cdist(grid_points, encoded_points)  # Shape: (grid_size^2, N_encoded)
-
+    # or using torus periodicity
+    if distance_computation_mode =="plane":
+        dists = torch.cdist(grid_points, encoded_points)  # Shape: (grid_size^2, N_encoded)
+    elif distance_computation_mode == "torus":
+        coordinate_wise_distances = torch.abs(grid_points[:,None,:] - encoded_points[None,:,:]) #shape (grid_size^2, N_encoded, dim)
+        coordinate_wise_distances_torus = torch.min(coordinate_wise_distances, 2*torch.pi - coordinate_wise_distances)
+        dists = coordinate_wise_distances_torus.norm(dim = 2) # Shape: (grid_size^2, N_encoded)
     # 3. Find the indices of the k=neighbours_number nearest neighbors
     _, nn_indices = torch.topk(dists, k=neighbours_number, largest=False, dim=1)  # Get indices of k=neighbours_number nearest neighbors
 
@@ -404,7 +446,10 @@ def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, gr
     plt.ylim(-torch.pi, torch.pi)
     plt.xlabel("Latent Dimension 1")
     plt.ylabel("Latent Dimension 2")
-    plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
+    if plot_title==None:
+        plt.title(f"{file_saving_name.replace('_',' ')} via {neighbours_number}-NN")
+    else:
+        plt.title(plot_title)
     if save_plot==True:
         plt.savefig(f"{saving_folder}/{file_saving_name}.pdf",bbox_inches='tight', format="pdf")
         print(f"Decision boundary plot saved as{saving_folder}/{file_saving_name}.pdf")
