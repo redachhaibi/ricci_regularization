@@ -1,6 +1,6 @@
 # imported from wavelets.py
 from tqdm                  import tqdm
-import torch
+import torch, math
 import numpy as np
 
 # Mathematical source for both Haar and Schauder(-Faber) bases: https://en.wikipedia.org/wiki/Haar_wavelet
@@ -34,11 +34,30 @@ def haar_basis( n_max, time_grid):
 # Numpy implementation of Schauder basis generation on [0,1]
 
 # Schauder elements are integrals of the Haar elements
+"""
 def schauder_basis_element(n, k, time_grid):
     haar_element =  haar_basis_element(n, k, time_grid)
     element = np.zeros_like( haar_element )
     element[1:] = (2**(1+0.5*n)) * 0.5* ( haar_element[:-1] + haar_element[1:] )* (time_grid[1:] - time_grid[:-1])
     return element.cumsum()
+"""
+
+# Fixed version of previous functon
+def schauder_basis_element(n, k, time_grid):
+    haar_element =  haar_basis_element(n, k, time_grid)
+    element = np.zeros_like( haar_element )
+    #for k=0 the following line yields a numerical error of size (2**(1+0.5*n)) * 0.5* (step of time_grid) 
+    #element[1:] = (2**(1+0.5*n)) * 0.5* ( haar_element[:-1] + haar_element[1:] )* (time_grid[1:] - time_grid[:-1])
+    #return element.cumsum()
+    element[1:] = (2**(1+0.5*n)) * 0.5* ( haar_element[:-1] + haar_element[1:] )* (time_grid[1:] - time_grid[:-1])
+    element = element.cumsum()
+    # a fix:
+    step_count = len(time_grid)
+    start_index = math.floor(((k + 1) / 2**n) * step_count - 1)
+    mask = np.arange(step_count) >= start_index
+    # Apply the mask. Make all elements with indices >= start_index equal to zero.
+    element[mask] = 0
+    return element
 
 def schauder_basis( n_max, time_grid):
     basis = []
@@ -113,7 +132,8 @@ class NumericalGeodesics():
                 # Compute curve of latent variables with suboptimal parameters
                 curve             = linear_curve + torch.mm( basis, parameters )
                 # Output
-                generated_images  = generator( encoding = curve )
+                #generated_images  = generator( encoding = curve )
+                generated_images  = generator( curve )
                 # Finite difference computation of energy
                 energy = (generated_images[1:,:]-generated_images[:-1,:]).pow(2).sum()
                 # Optimize
