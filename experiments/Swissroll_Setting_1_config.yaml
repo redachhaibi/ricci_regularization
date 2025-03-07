@@ -26,13 +26,13 @@ loss_settings:
   lambda_curv: 0.0               # Weight for curvature regularization
   lambda_contractive_encoder: 0.0  # Weight for contractive encoder
          
-  num_moments: 2                   # Number of empirical moments of the distribution penalized in the loss function
+  num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   delta_encoder: 0.5               # Threshold parameter for the encoder Frobenius norm
   eps: 0.1                         # Regularization parameter for inverse of metric computation (involved in Scalar curvature computation)
 
 optimizer_settings:       
-  lr: 0.001                       # Learning rate for the optimizer
-  num_epochs: 3                    # Number of epochs for training
+  lr: 0.0005                       # Learning rate for the optimizer
+  num_epochs: 80                    # Number of epochs for training
   weight_decay: 0.0                # Weight decay for the optimizer
        
 data_loader_settings:       
