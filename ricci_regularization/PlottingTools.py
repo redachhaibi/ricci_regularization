@@ -108,13 +108,14 @@ def plot_ae_outputs(test_dataset,encoder,decoder,n=10,D=784):
          ax.set_title('Reconstructed images')
     plt.show()
 
-def plot_ae_outputs_selected(test_dataset,encoder,decoder,selected_labels = None,D=784,dpi=400):
+def plot_ae_outputs_selected(test_dataset,encoder,decoder,targets=None,selected_labels = None,D=784,dpi=400):
     if selected_labels is None:
         n = 10
     else:
         n = len(selected_labels)
     plt.figure(figsize=(6 * n / 10, 1.5), dpi=dpi)
-    targets = test_dataset.targets.numpy()
+    if targets == None:
+        targets = test_dataset.targets.numpy()
     t_idx = {i: np.where(targets == i)[0][0] for i in selected_labels}
     for i in range(n):
         ax = plt.subplot(2, n, i + 1)

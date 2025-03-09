@@ -28,6 +28,14 @@ def uniform_loss(z, latent_dim, num_moments):
         unif_loss += mode4
     return unif_loss
 
+# this function is not used yet. to be called from loss_funtion, now it is inside it
+def contractive_loss(data,torus_ae, training_config):
+    encoder_jac_norm = ricci_regularization.Jacobian_norm_jacrev_vmap( data, 
+                                function = torus_ae.encoder_torus,
+                                input_dim = training_config["architecture"]["input_dim"] )
+    outlyers_encoder_jac_norm = encoder_jac_norm - training_config["loss_settings"]["delta_encoder"]
+    return torch.nn.ReLU()( outlyers_encoder_jac_norm ).max()
+
 
 
 # Loss = MSE + uniform_loss + curv_loss + contractive_loss
@@ -57,7 +65,9 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
             #dict_losses["Curvature"] = (torch.sqrt(det_on_data)*torch.square(Sc_on_data)).mean() 
             
             # avoiding recursive hell
-            dict_losses["Curvature"] = ricci_regularization.curvature_loss_jacfwd(encoded_points_no_grad, function=torus_ae.decoder_torus,eps=training_config["loss_settings"]["eps"])
+            dict_losses["Curvature"] = ricci_regularization.curvature_loss_jacfwd(encoded_points_no_grad, 
+                    function=torus_ae.decoder_torus, eps=training_config["loss_settings"]["eps"])
+            
             if training_config["training_mode"]["diagnostic_mode"] == True: # FIX this!
                 Sc_on_data, _ = ricci_regularization.Sc_g_jacfwd_vmap(encoded_points_no_grad,
                                             function=torus_ae.decoder_torus,eps=training_config["loss_settings"]["eps"])
@@ -65,7 +75,7 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
                 dict_losses["curv_squared_max"] = (torch.square(Sc_on_data.detach())).max()
         elif training_config["training_mode"]["curvature_computation_mode"] == "fd":
             dict_losses["Curvature"] = ricci_regularization.curvature_loss(points=encoded_points_no_grad,
-                                                        function=torus_ae.decoder_torus, h = 0.01, eps=0.)
+                                                        function=torus_ae.decoder_torus, h = 0.01, eps=training_config["loss_settings"]["eps"])
     if training_config["training_mode"]["diagnostic_mode"] == True:
         if training_config["training_mode"]["compute_curvature"] == False:
             encoded_points_no_grad = torus_ae.encoder2lifting(data).detach()
@@ -92,6 +102,8 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
         dict_losses["encoder_jac_norm_mean"] = encoder_jac_norm_mean
         dict_losses["encoder_jac_norm_max"] = encoder_jac_norm_max
     return dict_losses
+
+
 def train(torus_ae, training_config, train_loader, optimizer, 
           epoch=1, batch_idx = 0, dict_loss_arrays={},
           device = "cuda"):

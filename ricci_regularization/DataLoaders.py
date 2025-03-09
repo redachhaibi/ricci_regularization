@@ -79,7 +79,7 @@ def get_dataloaders(dataset_config: dict, data_loader_config: dict, dtype: str):
     }
     if dataset_config["name"] in ["MNIST01","MNIST","MNIST_subset"]:
         loaders["test_dataset"] = test_dataset
-        loaders["test_dataset_partial"] = test_dataset
+        loaders["test_dataset_partial"] = test_data
     else:
         loaders["test_dataset"] = test_data
     return loaders

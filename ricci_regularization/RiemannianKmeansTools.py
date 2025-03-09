@@ -123,7 +123,7 @@ def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics,
     return geodesic_curve
 
 def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
-                   reduction = "sum", device = "cuda"):
+                   reduction = "mean", device = "cuda"):
     """
     Computes the energy of geodesic curves using finite differences.
 
@@ -154,16 +154,21 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
         geodesic_curve = geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points)
     elif mode == "Schauder":
         geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
-    geodesic_curve = geodesic_curve.to(device)
+    geodesic_curve = geodesic_curve.to(device) # shape (N,K,step_count,d)
+    # define step count (number of interpolation points on the geodesic)
+    step_count = geodesic_curve.shape[-2]
     # decode the geodesics
     decoded_geodesic_curve = decoder(geodesic_curve)
     # Compute energy (finite differences)
-    tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:]
+    tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:] # shape (N,K,step_count-1,D)
     if reduction == "none":
-        energy = (tangent_vectors**2).sum(dim=(-2,-1)) # comute Euclidean compute_lengths of the curves in R^D
+        energy = (tangent_vectors**2).sum(dim=(-2,-1)) # comute Euclidean energies of the curves in R^D
     if reduction == "sum":
         energy = (tangent_vectors**2).sum()
-    # Warning! by default the outpiut is the single scalar, i.e the sum of all the energies
+    if reduction == "mean":
+        energy = (tangent_vectors**2).sum(dim=(-2,-1)).mean() # 
+    energy *= (step_count - 1) # correct normalization of finite differences energy computation
+    # Warning! by default the outpiut is the single scalar, i.e the mean of all the energies among N*K geodesics
     return energy
 
 def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
@@ -290,7 +295,7 @@ def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels,
     handles = [plt.Line2D([0], [0], marker='o', color='w', 
                 markerfacecolor=scatter.cmap(scatter.norm(label)), markersize=8) 
             for label in selected_labels]
-    plt.legend(handles, selected_labels, title="Ground Truth Labels")
+    plt.legend(handles, selected_labels, title="Ground Truth Labels",loc="upper left")
     plt.title(plot_title)
     if save_plot==True:
         plt.savefig(f"{saving_folder}/{file_saving_name}.pdf",bbox_inches='tight', format="pdf")
@@ -375,8 +380,10 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
         plt.savefig(f"{saving_folder}/{file_saving_name}.pdf", bbox_inches='tight', format="pdf")
         print(f"Decision boundary plot saved as {saving_folder}/{file_saving_name}.pdf")
     
-    if verbose:
+    if verbose  == True:
         plt.show()
+    else:
+        plt.close()
     return
 
 #older version to be deprecated
