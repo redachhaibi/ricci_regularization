@@ -63,7 +63,7 @@ def Sc_g_jacfwd (u, function, eps = 0.0):
 Sc_g_jacfwd_vmap = torch.func.vmap(Sc_g_jacfwd)
 
 # computing the loss
-def curvature_loss_jacfwd (points, function, eps = 0.0):
+def curvature_loss_jacfwd (points, function, eps = 0.0, reduction = "mean"):
     # compute Christoffel symbols and derivatives and inverse of metric
     dCh, (Ch, g, g_inv) = torch.func.vmap( torch.func.jacfwd(functools.partial( aux_func, function=function, eps=eps),
                             has_aux=True) )( points )
@@ -72,8 +72,19 @@ def curvature_loss_jacfwd (points, function, eps = 0.0):
     Riemann += torch.einsum("bikp,bplj->bijkl", Ch, Ch) - torch.einsum("bilp,bpkj->bijkl", Ch, Ch)
     
     Ricci = torch.einsum("bcack->bak",Riemann)
-    R = torch.einsum('bak,bak',g_inv,Ricci)
-    return ( ( R**2 ) * torch.sqrt( torch.det(g) ) ).mean()
+    R = torch.einsum('bak,bak->b',g_inv,Ricci)
+    if reduction == "mean":
+        return ( ( R**2 ) * torch.sqrt( torch.det(g) ) ).mean()
+    elif reduction == "none":
+        dict = {
+            "R": R,
+            "g": g,
+            "g_inv": g_inv,
+            "Ch": Ch,
+            "dCh": dCh,
+            "Ricci": Ricci
+        }
+        return dict
 
 def metric_inv_jacfwd(u, function, eps=0.0):
     g = metric_jacfwd(u,function)
