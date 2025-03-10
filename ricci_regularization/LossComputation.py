@@ -208,7 +208,7 @@ def test(torus_ae, test_loader, training_config, dict_loss_arrays = {}, batch_id
             dict_loss_arrays[key].append(dict_losses[key].item())
             # mean losses to print
             dict_loss2print[key] = f"{dict_losses[key]:.4f}"
-#            dict_loss2print[key] = f"{np.array(dict_loss_arrays[key]).mean():.4f}"
+            # dict_loss2print[key] = f"{np.array(dict_loss_arrays[key]).mean():.4f}"
         t.set_postfix(dict_loss2print)
         # switch batch index
         batch_idx+=1

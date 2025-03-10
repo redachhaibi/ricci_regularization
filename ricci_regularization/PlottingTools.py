@@ -2,6 +2,8 @@ import torch, math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from scipy import signal
 
 def make_grid(numsteps, 
               xcenter = 0.0, ycenter = 0.0,
@@ -174,7 +176,6 @@ def plot3losses(mse_train_list,uniform_train_list,curv_train_list):
     plt.show()
     return fig,axes
 
-from scipy import signal
 def plot9losses(mse_train_list,curv_train_list,g_inv_train_list,numwindows1=50,numwindows2=200):
     fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18,18))
     
@@ -215,7 +216,6 @@ def plot9losses(mse_train_list,curv_train_list,g_inv_train_list,numwindows1=50,n
     fig.show()
     return fig,axes
 
-import matplotlib.colors as mcolors
 def plotlosses(**dict_of_losses):
     number_of_plots = len(dict_of_losses)
     fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(6, number_of_plots*6))
@@ -337,7 +337,80 @@ def translate_dict(dict_losses_to_plot, eps = 0):
         dictplots.pop(key, None)
     return dictplots
 
-def PlotSmartConvolve(dictplots, numwindows1 = 50, numwindows2 = 200):
+
+def PlotSmartConvolve(dictplots,test_dictplots = None,
+        plot_test_losses = True,
+        numwindows1 = 50, numwindows2 = 200):
+    if plot_test_losses == True and test_dictplots == None:
+        print("Set test losses dictionary to print!")
+        return
+    
+    number_of_plots = len(dictplots)
+
+    fig, axes = plt.subplots(nrows=number_of_plots, ncols=3, figsize=(4*3, number_of_plots*4))
+    
+    win = [signal.windows.hann(1), signal.windows.hann(numwindows1), signal.windows.hann(numwindows2)]  # convolution window size
+    i = 0
+    color_iterable = iter(mcolors.TABLEAU_COLORS)
+    for plot_name, plot_info in dictplots.items():
+        #if number_of_plots == 1:
+        #    axes = [axes]
+        for legend, curve in plot_info["data"].items(): 
+            try:
+                newcolor = next(color_iterable)
+            except StopIteration:
+                color_iterable = iter(mcolors.TABLEAU_COLORS)
+                newcolor = next(color_iterable)
+            #end except
+            if legend=="max":
+                linestyle = 'dashed'
+            else:
+                linestyle = 'solid'
+            # end if
+            for j in range(3):
+                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='valid') / sum(win[j]), 
+                                   color = newcolor,
+                                   label = "Train",
+                                   ls = linestyle)
+                axes[i,j].set_xlabel('Batches')
+            # end for
+        # end for
+        axes[i,0].set_ylabel(plot_info["yname_latex"])
+        #axes[i,0].legend(loc="lower left")
+        i += 1
+    # end for
+    i=0
+    if plot_test_losses == True:    
+        for plot_name, plot_info in test_dictplots.items():
+            for legend, test_curve in plot_info["data"].items(): 
+                try:
+                    newcolor = next(color_iterable)
+                except StopIteration:
+                    color_iterable = iter(mcolors.TABLEAU_COLORS)
+                    newcolor = next(color_iterable)
+                #end except
+                if legend=="max":
+                    linestyle = 'dashed'
+                else:
+                    linestyle = 'solid'
+                # end if
+                pace_ratio = len(curve)/len(test_curve)
+                test_curve_interpolated = np.interp(np.arange(len(curve)),
+                                                    np.arange(len(test_curve))*pace_ratio,
+                                                    test_curve) # to match train curve
+                for j in range(3):
+                    axes[i,j].semilogy(signal.convolve(test_curve_interpolated, win[j], mode='valid') / sum(win[j]), 
+                                    color = newcolor,
+                                    label = "Test",
+                                    ls = linestyle)
+            axes[i,0].legend(loc="lower left")
+            i+=1
+    plt.show()
+    return fig,axes
+
+
+# to be deprecated
+def PlotSmartConvolve_old(dictplots, numwindows1 = 50, numwindows2 = 200):
     number_of_plots = len(dictplots)
     fig, axes = plt.subplots(nrows=number_of_plots, ncols=3, figsize=(4*3, number_of_plots*4))
     
