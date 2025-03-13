@@ -90,7 +90,29 @@ def geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_
     geodesic_curve = torch.cat((starting_points_expanded, parameters_of_geodesics, final_points_expanded),dim=2) 
     return geodesic_curve
 
-def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points):
+def construct_shortest_linear_segments_connecting(starting_points, final_points, num_aux_points):
+    # Check that the final dimensions of inputs match
+    if starting_points.shape[-1] != final_points.shape[-1] or final_points.shape[-1] != starting_points.shape[-1]:
+        raise ValueError(
+            f"Mismatch in dimensions: 'starting_points' and 'final_points' must have the same final dimension. "
+            f"Got starting_points with shape {starting_points.shape}, final_points with shape {final_points.shape}. "
+        )
+
+    # Generate interpolation parameters (num_aux_points values between 0 and 1)
+    t = torch.linspace(0, 1, steps=num_aux_points).to(starting_points.device).view(1, 1, num_aux_points, 1)  # Shape: (1, 1, num_aux_points, 1)
+
+    # Reshape starting_points and final_points for broadcasting
+    starting_points_expanded = starting_points.unsqueeze(1).unsqueeze(2)  # Shape: (num_starting_points, 1, 1, points_dim)
+    final_points_expanded = final_points.unsqueeze(0).unsqueeze(2)        # Shape: (1, num_final_points, 1, points_dim)
+
+    # Compute all intermediate points using linear interpolation and recenter all geodesics
+    starting_points_recentered = torch.remainder((starting_points_expanded - final_points_expanded + torch.pi), 2*torch.pi ) - torch.pi
+    #final_points_recentered = torch.zeros_like(final_points_expanded)
+
+    geodesic_curve_recentered = (1 - t) * starting_points_recentered + final_points_expanded 
+    return geodesic_curve_recentered
+
+def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points, periodicity_mode = True):
     """
     Constructs geodesic curves using Schauder basis representation.
 
@@ -115,15 +137,24 @@ def geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics,
     basis = geodesic_solver.schauder_bases["zero_boundary"]["basis"]
     step_count = basis.shape[0]
 
-    linear_curve = construct_interpolation_points_on_segments_connecting_centers2encoded_data(starting_points=starting_points, 
-            final_points=final_points,num_aux_points=step_count, 
+    if periodicity_mode == True:
+        linear_curve = construct_shortest_linear_segments_connecting(
+            starting_points=starting_points, 
+            final_points=final_points,
+            num_aux_points=step_count
+        )
+    else:
+        linear_curve = construct_interpolation_points_on_segments_connecting_centers2encoded_data(
+            starting_points=starting_points, 
+            final_points=final_points,
+            num_aux_points=step_count, 
             cut_off_ends=False)
     
     geodesic_curve = linear_curve + torch.einsum("sn,bend->besd", basis, parameters)
     return geodesic_curve
 
 def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
-                   reduction = "mean", device = "cuda"):
+                   reduction = "mean", device = "cuda", periodicity_mode = True):
     """
     Computes the energy of geodesic curves using finite differences.
 
@@ -153,7 +184,8 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
     if mode == "Interpolation_points":
         geodesic_curve = geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points)
     elif mode == "Schauder":
-        geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
+        geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points, 
+                                                            periodicity_mode=periodicity_mode)
     geodesic_curve = geodesic_curve.to(device) # shape (N,K,step_count,d)
     # define step count (number of interpolation points on the geodesic)
     step_count = geodesic_curve.shape[-2]
@@ -172,7 +204,7 @@ def compute_energy(mode, parameters_of_geodesics, end_points, decoder, geodesic_
     return energy
 
 def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic_solver=None, 
-                    reduction="none", device = "cuda"):
+                    reduction="none", device = "cuda", periodicity_mode = True, return_geodesic_curve = False):
     """
     Computes the lengths of geodesic curves in Euclidean space.
 
@@ -201,7 +233,7 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
     if mode == "Interpolation_points":
         geodesic_curve = geodesics_from_parameters_interpolation_points(parameters_of_geodesics, end_points)
     elif mode == "Schauder":
-        geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points)
+        geodesic_curve = geodesics_from_parameters_schauder(geodesic_solver, parameters_of_geodesics, end_points, periodicity_mode=periodicity_mode)
     geodesic_curve = geodesic_curve.to(device)
     decoded_geodesic_curve = decoder(geodesic_curve)
     tangent_vectors = decoded_geodesic_curve[:,:,1:,:] - decoded_geodesic_curve[:,:,:-1,:]
@@ -212,12 +244,15 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
     if reduction == "old":    
         lengths = torch.sqrt((tangent_vectors**2).sum(dim=(-2,-1))) # seems to be a wrong formula
     # Warning! by default the outpiut is the vector of length of all geodesics 
-    return lengths
+    if return_geodesic_curve == True:
+        return geodesic_curve, lengths
+    else:
+        return lengths
 
 # ---------------------------------------
 #plotting
 
-def plot_octopus(geodesic_curve, memberships = None, 
+def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None, 
                  saving_folder = None, suffix = None, verbose = True,
                  xlim = torch.pi, ylim = torch.pi):
     """
@@ -245,13 +280,12 @@ def plot_octopus(geodesic_curve, memberships = None,
         plt.xlim(-xlim, xlim)
     if ylim != None:
         plt.ylim(-xlim, xlim)
-    for i in range(N):
-        for j in range(K):
-            #if j == 0:
-            #    color = "blue"
-            #else:
-            color = "orange"
-            plt.plot(geodesic_curve[i,j,:,0], geodesic_curve[i,j,:,1],'-',marker='o', c = color, markersize=3)
+    if periodicity_mode == True:
+                plt.scatter(geodesic_curve[:,:,:,0], geodesic_curve[:,:,:,1],marker='o',s=1, c = "orange")
+    else:
+        for i in range(N):
+            for j in range(K):
+                plt.plot(geodesic_curve[i,j,:,0], geodesic_curve[i,j,:,1],'-',marker='o', c = "orange", markersize=3)
     # plot centers
     centers = geodesic_curve[0,:,-1,:]
     # plot the datapoints (the starting points on all the geodesics, colored by memberships if specified):
@@ -267,7 +301,10 @@ def plot_octopus(geodesic_curve, memberships = None,
         cmap = ricci_regularization.discrete_cmap(num_classes, 'jet')  # Define your colormap
         colors = cmap(memberships.cpu().numpy())  # Map memberships to colors
         for i in range(N):
-            plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], zorder = 10)
+            if periodicity_mode == True:
+                plt.scatter(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], s=1, zorder = 10)
+            else:
+                plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], zorder = 10)
     else:
         plt.scatter(centers[:,0], centers[:,1], c="red", label = "centers", marker='*', edgecolor='black', s = 170,zorder = 10)
         plt.scatter(geodesic_curve[:,0,0,0], geodesic_curve[:,0,0,1], c="green", label = "centers", marker='o', s = 30,zorder = 10)
