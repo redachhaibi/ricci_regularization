@@ -251,10 +251,9 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
 
 # ---------------------------------------
 #plotting
-
 def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None, 
                  saving_folder = None, suffix = None, verbose = True,
-                 xlim = torch.pi, ylim = torch.pi):
+                 xlim = torch.pi, ylim = torch.pi, show_points_in_original_local_charts =False):
     """
     Plots geodesics, centers, and datapoints on a 2D plane with options to visualize memberships 
     and meaningful geodesics, and save the resulting plot.
@@ -281,7 +280,8 @@ def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None,
     if ylim != None:
         plt.ylim(-xlim, xlim)
     if periodicity_mode == True:
-                plt.scatter(geodesic_curve[:,:,:,0], geodesic_curve[:,:,:,1],marker='o',s=1, c = "orange")
+                plt.scatter(geodesic_curve[:,:,:,0], geodesic_curve[:,:,:,1],marker='o',
+                            s=1, c = "orange",zorder=5)
     else:
         for i in range(N):
             for j in range(K):
@@ -291,8 +291,23 @@ def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None,
     # plot the datapoints (the starting points on all the geodesics, colored by memberships if specified):
     if memberships!= None:
         num_classes = int(memberships.max().item()) + 1
-        plt.scatter(centers[:,0], centers[:,1], c=torch.arange(num_classes), marker='*', edgecolor='black',  cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 170,zorder = 12)
-        plt.scatter(geodesic_curve[:,0,0,0], geodesic_curve[:,0,0,1], c=memberships, marker='o', edgecolor='none', cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
+        
+        # plot cluster centers
+        plt.scatter(centers[:,0], centers[:,1], c=torch.arange(num_classes), marker='*', 
+                    edgecolor='black',  cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 170,zorder = 12)
+        
+        # plot initial points of the geodesics (i.e. encoded data points)
+        if show_points_in_original_local_charts == True:
+            plt.scatter(geodesic_curve[:,0,0,0],
+                        geodesic_curve[:,0,0,1], 
+                        c=memberships, marker='o', edgecolor='none', 
+                        cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
+        else:
+            plt.scatter(torch.remainder(geodesic_curve[:,0,0,0] + torch.pi, 2*torch.pi) - torch.pi,
+                        torch.remainder(geodesic_curve[:,0,0,1] + torch.pi, 2*torch.pi) - torch.pi, 
+                        c=memberships, marker='o', edgecolor='none', 
+                        cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
+        
         # recompute the geodesics to nearest centroids
         batch_indices = torch.arange(N) # this is needed, since   geodesic_curve[:, cluster_index_of_each_point, :, :] will produce a tensor of shape (N,N,step_count,d)
         # pick only geodesics connecting points to cluster relevant centroids where the points are assigned
@@ -302,7 +317,9 @@ def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None,
         colors = cmap(memberships.cpu().numpy())  # Map memberships to colors
         for i in range(N):
             if periodicity_mode == True:
-                plt.scatter(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], s=1, zorder = 10)
+                plt.scatter(torch.remainder(geodesics2nearestcentroids[i,:,0] + torch.pi,2*torch.pi) - torch.pi, 
+                            torch.remainder(geodesics2nearestcentroids[i,:,1] + torch.pi,2*torch.pi) - torch.pi, 
+                            c=colors[i], s=1, zorder = 10)
             else:
                 plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], zorder = 10)
     else:
@@ -343,7 +360,7 @@ def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels,
 # Decision boundary plot
 from scipy.interpolate import griddata
 def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
-        selected_labels = None, 
+        ground_truth_labels = None, selected_labels = None, 
         grid_resolution=100, contour_levels_count=10, neighbours_number=7, 
         distance_computation_mode = "torus",interpolation_method='nearest',
         background_opacity = 0.5, points_size = 50,
@@ -358,6 +375,30 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
     # Convert tensors to numpy
     encoded_points_np = encoded_points.numpy()
     labels_for_coloring_np = labels_for_coloring.numpy()
+
+    # uniformizing coloring if the ground truth colors are nown
+    def construct_mapping_np(labels_for_coloring_np, ground_truth_labels):
+        unique_labels = np.unique(labels_for_coloring_np)
+        mapping = {}
+
+        for label in unique_labels:
+            indices = np.where(labels_for_coloring_np == label)[0]
+            gt_subset = ground_truth_labels[indices]
+            unique_gt, counts = np.unique(gt_subset, return_counts=True)
+            most_common_gt = unique_gt[np.argmax(counts)]
+            mapping[label] = most_common_gt
+        return mapping
+
+    def apply_mapping_np(labels_for_coloring_np, mapping):
+        # Replace each color label with its most frequent ground truth match
+        mapped_array = np.array([mapping[label] for label in labels_for_coloring_np])
+        return mapped_array
+    if ground_truth_labels!= None:
+        mapping = construct_mapping_np(labels_for_coloring_np, np.array(ground_truth_labels))
+        labels_for_coloring_np = apply_mapping_np(labels_for_coloring_np,mapping)
+
+    # the old way:
+    """
     if selected_labels == None:
         # mapping all labels to 0,1,2...,k-1 with preserving the order
         _, labels_for_coloring_np = np.unique(labels_for_coloring_np, return_inverse=True)
@@ -368,6 +409,7 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
         mapping = torch.tensor(selected_labels)
         # Apply mapping
         labels_for_coloring_np = mapping[labels_for_coloring_np]
+    """
     # Create a dense uniform grid in [-pi, pi]^2
     x_vals = np.linspace(-np.pi, np.pi, grid_resolution)
     y_vals = np.linspace(-np.pi, np.pi, grid_resolution)
