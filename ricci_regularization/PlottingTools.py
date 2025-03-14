@@ -601,7 +601,8 @@ def point_plot_old(encoder, data: torch.utils.data.dataset.Subset, dataset_name,
 # this function is used for plotting while training
 def point_plot_fast(encoded_points,labels, 
                batch_idx, config, show_title=True, colormap='jet', 
-               s=40, draw_grid=False, figsize=(9, 9)):
+               s=40, draw_grid=False, figsize=(9, 9),
+               Saving_path=None):
     # Plotting the latent embedding of "data" using the encoder function in "encoder"
     # params of the dataset taken from YAML file "config"
     dataset_name = config["dataset"]["name"]
@@ -648,6 +649,7 @@ def point_plot_fast(encoded_points,labels,
 
     # Adjust layout to prevent elements from being cut off
     fig.tight_layout()
-
+    if Saving_path!= None:
+        fig.savefig(Saving_path+f"/latent_space_at_batch_{batch_idx}.pdf", bbox_inches = 'tight', format = "pdf")
     # Return the figure object
     return fig

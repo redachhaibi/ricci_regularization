@@ -55,7 +55,8 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
                                     function = torus_ae.encoder_torus,
                                     input_dim = training_config["architecture"]["input_dim"] )
         outlyers_encoder_jac_norm = encoder_jac_norm - training_config["loss_settings"]["delta_encoder"]
-        dict_losses["Contractive"] = torch.nn.ReLU()( outlyers_encoder_jac_norm ).max()
+        #dict_losses["Contractive"] = torch.nn.ReLU()( outlyers_encoder_jac_norm ).max()
+        dict_losses["Contractive"] = torch.nn.ReLU()( outlyers_encoder_jac_norm ).mean()
     if training_config["training_mode"]["compute_curvature"] == True:
         encoded_points_no_grad = torus_ae.encoder2lifting(data).detach()
         if training_config["training_mode"]["curvature_computation_mode"] == "jacfwd":        
