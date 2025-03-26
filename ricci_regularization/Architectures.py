@@ -28,7 +28,7 @@ class TorusAE(nn.Module):
         #h = torch.cat( (self.non_linearity(h), self.non_linearity2(h)), 1)
         h = torch.cat( (self.non_linearity2(h), self.non_linearity(h)), 1)
         return h # Latent variable z, Wannabe uniform on the circle
-    def encoder2lifting(self, x):
+    def encoder_to_lifting(self, x):
         h = self.non_linearity(self.fc1(x))
         h = self.non_linearity(self.fc2(h))
         h = self.fc3(h)
@@ -145,7 +145,7 @@ class TorusConvAE(nn.Module):
         #h = torch.cat( (self.non_linearity(h), self.non_linearity2(h)), 1)
         h = torch.cat( (self.non_linearity2(h), self.non_linearity(h)), 1)
         return h # Latent variable z, Wannabe uniform on the circle
-    def encoder2lifting(self, x):
+    def encoder_to_lifting(self, x):
         h = self.encoder(x) 
         cosphi = h[:, 0:self.z_dim]
         sinphi = h[:, self.z_dim:2*self.z_dim]

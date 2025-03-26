@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import ricci_regularization
+import ricci_regularization, time, os
+from tqdm import tqdm
 
 def initialize_centers(encoded_points, num_clusters, num_data_points):
     """
@@ -251,9 +252,28 @@ def compute_lengths(mode, parameters_of_geodesics, end_points, decoder, geodesic
 
 # ---------------------------------------
 #plotting
-def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None, 
+def construct_mapping_np(memberships_np, ground_truth_labels):
+    unique_labels = np.unique(memberships_np)
+    mapping = {}
+
+    for label in unique_labels:
+        indices = np.where(memberships_np == label)[0]
+        gt_subset = ground_truth_labels[indices]
+        unique_gt, counts = np.unique(gt_subset, return_counts=True)
+        most_common_gt = unique_gt[np.argmax(counts)]
+        mapping[label] = most_common_gt
+    return mapping
+
+def apply_mapping_np(memberships_np, mapping):
+    # Replace each color label with its most frequent ground truth match
+    mapped_array = np.array([mapping[label] for label in memberships_np])
+    return mapped_array
+def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None, ground_truth_labels = None, 
                  saving_folder = None, suffix = None, verbose = True,
-                 xlim = torch.pi, ylim = torch.pi, show_points_in_original_local_charts =False):
+                 xlim = torch.pi, ylim = torch.pi, 
+                 show_geodesics_in_original_local_charts = False,
+                 show_only_geodesics_to_nearest_centroids = False,
+                 size_of_points = 1):
     """
     Plots geodesics, centers, and datapoints on a 2D plane with options to visualize memberships 
     and meaningful geodesics, and save the resulting plot.
@@ -271,6 +291,20 @@ def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None,
     Returns:
     - None
     """
+    def move_to_main_local_chart(tensor):
+        return torch.remainder(tensor + torch.pi, 2*torch.pi) - torch.pi
+    
+    if show_geodesics_in_original_local_charts == False:
+        geodesic_curve = move_to_main_local_chart(geodesic_curve)
+    # Convert to numpy
+    if memberships != None:
+        memberships_np = np.array(memberships)
+
+    # uniformizing coloring if the ground truth colors are nown
+    if ground_truth_labels!= None:
+        mapping = construct_mapping_np(memberships_np, np.array(ground_truth_labels))
+        memberships_np = apply_mapping_np(memberships_np,mapping)
+
     # Detach geodesic_curve from computation graph to avoid accidental gradients.
     geodesic_curve = geodesic_curve.detach() #shape (num_datapoints, num_clusters, num_aux_points_on_geodesics,latent_dimension)
     N = geodesic_curve.shape[0] # num data points
@@ -279,56 +313,58 @@ def plot_octopus(geodesic_curve, periodicity_mode=True, memberships = None,
         plt.xlim(-xlim, xlim)
     if ylim != None:
         plt.ylim(-xlim, xlim)
-    if periodicity_mode == True:
-                plt.scatter(geodesic_curve[:,:,:,0], geodesic_curve[:,:,:,1],marker='o',
-                            s=1, c = "orange",zorder=5)
-    else:
-        for i in range(N):
-            for j in range(K):
-                plt.plot(geodesic_curve[i,j,:,0], geodesic_curve[i,j,:,1],'-',marker='o', c = "orange", markersize=3)
+    # plot allgeodesics in orange if needed
+    if show_only_geodesics_to_nearest_centroids == False:
+        if periodicity_mode == True:
+            plt.scatter(geodesic_curve[:,:,:,0], geodesic_curve[:,:,:,1],marker='o',
+                    s=1, c = "orange",zorder=5)
+        else:
+            for i in range(N):
+                for j in range(K):
+                    plt.plot(geodesic_curve[i,j,:,0], geodesic_curve[i,j,:,1],'-',marker='o', c = "orange", markersize=3)
+        # end if
+    # end if
+
     # plot centers
     centers = geodesic_curve[0,:,-1,:]
     # plot the datapoints (the starting points on all the geodesics, colored by memberships if specified):
     if memberships!= None:
-        num_classes = int(memberships.max().item()) + 1
-        
+        num_classes = int(memberships_np.max().item()) + 1
+        colormap = ricci_regularization.discrete_cmap(num_classes, 'jet')
         # plot cluster centers
-        plt.scatter(centers[:,0], centers[:,1], c=torch.arange(num_classes), marker='*', 
-                    edgecolor='black',  cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 170,zorder = 12)
+        plt.scatter(centers[:,0], centers[:,1], c=apply_mapping_np(np.arange(K),mapping), 
+                marker='*', edgecolor='black',  
+                cmap=colormap, s = 170,zorder = 12)
         
-        # plot initial points of the geodesics (i.e. encoded data points)
-        if show_points_in_original_local_charts == True:
-            plt.scatter(geodesic_curve[:,0,0,0],
+        # plot initial points of the geodesics (i.e. encoded data points) colored by assigned labels
+        plt.scatter(geodesic_curve[:,0,0,0],
                         geodesic_curve[:,0,0,1], 
-                        c=memberships, marker='o', edgecolor='none', 
-                        cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
-        else:
-            plt.scatter(torch.remainder(geodesic_curve[:,0,0,0] + torch.pi, 2*torch.pi) - torch.pi,
-                        torch.remainder(geodesic_curve[:,0,0,1] + torch.pi, 2*torch.pi) - torch.pi, 
-                        c=memberships, marker='o', edgecolor='none', 
-                        cmap=ricci_regularization.discrete_cmap(num_classes, 'jet'), s = 30,zorder = 10)
-        
+                        c=memberships_np, marker='o', edgecolor='none', 
+                        cmap=colormap, s = 30,zorder = 10)
         # recompute the geodesics to nearest centroids
         batch_indices = torch.arange(N) # this is needed, since   geodesic_curve[:, cluster_index_of_each_point, :, :] will produce a tensor of shape (N,N,step_count,d)
         # pick only geodesics connecting points to cluster relevant centroids where the points are assigned
         geodesics2nearestcentroids = geodesic_curve[batch_indices, memberships, :, :].detach() # shape (N,step_count,d)
-        # color the geodesics
-        cmap = ricci_regularization.discrete_cmap(num_classes, 'jet')  # Define your colormap
-        colors = cmap(memberships.cpu().numpy())  # Map memberships to colors
-        for i in range(N):
-            if periodicity_mode == True:
-                plt.scatter(torch.remainder(geodesics2nearestcentroids[i,:,0] + torch.pi,2*torch.pi) - torch.pi, 
-                            torch.remainder(geodesics2nearestcentroids[i,:,1] + torch.pi,2*torch.pi) - torch.pi, 
-                            c=colors[i], s=1, zorder = 10)
-            else:
-                plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], c=colors[i], zorder = 10)
+        step_count = geodesics2nearestcentroids.shape[1]
+        # color the geodesics to nearest centroids
+        if periodicity_mode == True:
+            plt.scatter(geodesics2nearestcentroids[:,:,0], 
+                        geodesics2nearestcentroids[:,:,1], 
+                        c=memberships_np.repeat(step_count,axis=0).T, cmap=colormap, s=size_of_points, zorder = 10)
+        else:
+            for i in range(N):
+                colors = colormap(memberships_np) # this gives wrong colors
+                plt.plot(geodesics2nearestcentroids[i,:,0], geodesics2nearestcentroids[i,:,1], 
+                         c=colors[i], zorder = 10)
     else:
         plt.scatter(centers[:,0], centers[:,1], c="red", label = "centers", marker='*', edgecolor='black', s = 170,zorder = 10)
         plt.scatter(geodesic_curve[:,0,0,0], geodesic_curve[:,0,0,1], c="green", label = "centers", marker='o', s = 30,zorder = 10)
     # save images
     if saving_folder != None:
         if suffix != None:
-            plt.savefig(saving_folder + f"/frame_{suffix:04d}.png")
+            saving_path = saving_folder + f"/frame_{suffix:04d}.png"
+            plt.savefig(saving_path)
+            print(f"Octopus saved at {saving_path}")
     if verbose == False:
         plt.close()
     plt.show()
@@ -356,6 +392,8 @@ def manifold_plot_selected_labels(encoded_points2plot, encoded_points_labels,
         print(f"manifold plot saved as{saving_folder}/{file_saving_name}.pdf")
     if verbose==True:
         plt.show()
+    else:
+        plt.close()
 
 # Decision boundary plot
 from scipy.interpolate import griddata
@@ -602,3 +640,285 @@ def compute_f_measure(P_labels, Q_labels):
     
     F_measure = (2 * a) / (2 * a + b + c)
     return F_measure
+
+#-----------------------------------------------------
+def get_validation_dataset(yaml_config):
+    # Load data loaders based on YAML configuration
+    dict = ricci_regularization.DataLoaders.get_dataloaders(
+        dataset_config=yaml_config["dataset"],
+        data_loader_config=yaml_config["data_loader_settings"],
+        dtype=torch.float32
+    )
+    print("Experiment results loaded successfully.")
+    # Loading data
+    validation_dataset = dict.get("test_dataset")  # Assuming 'test_dataset' is a key returned by get_dataloaders
+
+    # Loading the pre-tained AE
+    torus_ae, Path_ae_weights = ricci_regularization.DataLoaders.get_tuned_nn(config=yaml_config)
+    torus_ae.cpu()
+    torus_ae.eval()
+    return torus_ae, validation_dataset
+def load_points_for_clustering(validation_dataset, random_seed_picking_points, yaml_config, torus_ae, 
+                               Path_clustering_setup, verbose = False, N=300):
+    validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=100)
+    D = yaml_config["architecture"]["input_dim"]
+    list_encoded_data_filtered = []
+    list_labels_filtered = []
+    torus_ae.cpu()
+    for data, label in validation_loader: # in order to respect blind test philosophy 
+        mask_batch = torch.isin(label, torch.tensor(yaml_config["dataset"]["selected_labels"])) # mask will be used to chose only labels in selected_labels
+        data_filtered = data[mask_batch]
+        labels_filtered = label[mask_batch]
+        enc_images = torus_ae.encoder_to_lifting(data_filtered.reshape(-1, D)).detach()
+        list_encoded_data_filtered.append(enc_images)
+        list_labels_filtered.append(labels_filtered)
+    all_encoded_data_filtered = torch.cat(list_encoded_data_filtered)
+    all_labels_filtered = torch.cat(list_labels_filtered)
+    # balanced clusters
+    encoded_points = []
+    encoded_labels = []
+    # Sample 100 points from each label
+    torch.manual_seed(random_seed_picking_points) # reproducibility
+    for label in yaml_config["dataset"]["selected_labels"]:
+        indices = torch.where(all_labels_filtered == label)[0]
+        sampled_indices = indices[torch.randperm(len(indices))[:min(N//3, len(indices))]]
+        encoded_points.append(all_encoded_data_filtered[sampled_indices])
+        encoded_labels.append(all_labels_filtered[sampled_indices])
+    # Convert to tensors
+    encoded_points = torch.cat(encoded_points, dim=0)
+    ground_truth_labels = torch.cat(encoded_labels, dim=0)
+
+    if not os.path.exists(Path_clustering_setup):  # Check if the picture path does not exist
+        os.mkdir(Path_clustering_setup)  # Create the directory for plots if not yet created
+        print(f"Created directory: {Path_clustering_setup}")  # Print directory creation feedback
+    else:
+        print(f"Directiry already exists: {Path_clustering_setup}")
+    # manifold plot
+    manifold_plot_selected_labels(all_encoded_data_filtered,
+                all_labels_filtered,yaml_config["dataset"]["selected_labels"],
+                saving_folder=Path_clustering_setup, plot_title="Manifold plot for all points with selected labels",
+                file_saving_name="Manifold_plot_selected_labels", verbose=verbose)
+    return encoded_points, ground_truth_labels
+
+def Riemannian_k_means_fit(encoded_points, params):
+    N = params["N"]
+    periodicity_mode = params["periodicity_mode"]
+    K = params["K"]
+    torus_ae = params["torus_ae"]
+    d = params["d"]
+    beta = params["beta"]
+    learning_rate = params["learning_rate"]
+    num_iter_outer = params["num_iter_outer"]
+    num_iter_inner = params["num_iter_inner"]
+    device = params["device"]
+    mode = params["mode"]
+    n_max = params["n_max"]
+    step_count = params["step_count"]
+
+    #initialization
+    initial_centroids = initialize_centers(encoded_points, K, N) 
+    current_centroids = torch.clone(initial_centroids) 
+
+    if mode == "Interpolation_points":
+        geodesic_solver = None
+        # Initialize geodesic segments
+        parameters_of_geodesics = construct_interpolation_points_on_segments_connecting_centers2encoded_data(
+                encoded_points, 
+                initial_centroids, 
+                num_aux_points = step_count)
+    elif mode == "Schauder":
+        geodesic_solver = ricci_regularization.Schauder.NumericalGeodesics(n_max, step_count)
+        # Get Schauder basis
+        N_max = geodesic_solver.schauder_bases["zero_boundary"]["N_max"]
+        basis = geodesic_solver.schauder_bases["zero_boundary"]["basis"]
+        # Define parameters (batch_size × N_max × dim)
+        parameters_of_geodesics = torch.zeros((N, K, N_max, d), requires_grad=True)
+    init_parameters = torch.clone(parameters_of_geodesics) # save initial segments
+    # Set optimizer params
+    parameters = torch.nn.Parameter(parameters_of_geodesics) # Wrap as a parameter
+
+    optimizer = torch.optim.SGD([parameters], lr=learning_rate)
+
+    cluster_index_of_each_point = None
+    geodesics_to_nearest_centroids = None
+
+    #losses
+    history = []
+
+    # timing
+    start_time = time.time()
+    # sending the nn to selected device (usually it should be cuda)
+    torus_ae.to(device)
+    
+    # ----------------------------
+    # Riemannian K-means Algorithm
+    # ----------------------------
+    # Outer loop 
+    t = tqdm(range(num_iter_outer), desc="Outer Loop iteration: 0")
+    for iter_outer in t:    
+        # Inner loop (refining geodesics)
+        for iter_inner in range(num_iter_inner):
+    #for iter_outer in range(num_iter_outer):
+        # Inner loop (refining geodesics)
+    #    for iter_inner in range(num_iter_inner):
+            optimizer.zero_grad()  # Zero gradients
+            # Compute the loss
+            energies_of_geodesics = compute_energy(
+                    mode = mode, 
+                    parameters_of_geodesics=parameters, 
+                    end_points = [encoded_points, current_centroids],
+                    decoder = torus_ae.decoder_torus,
+                    geodesic_solver = geodesic_solver,
+                    reduction="none", device=device, 
+                    periodicity_mode=periodicity_mode)
+            loss_geodesics = energies_of_geodesics.sum()
+            # Backpropagation: compute gradients
+            loss_geodesics.backward()
+            # Update parameters
+            optimizer.step()
+            # Store the loss value
+        # end inner loop
+        energies_of_geodesics = energies_of_geodesics.cpu()
+        # compute geodesic_curve of shape (N,K,step_count,d)
+        # compute a vector of length of all geodesics shape (N,K)
+        with torch.no_grad():
+            geodesic_curve, lengths_of_geodesics = compute_lengths(
+                    mode = mode,
+                    parameters_of_geodesics=parameters,
+                    end_points = [encoded_points, current_centroids],
+                    decoder = torus_ae.decoder_torus,
+                    geodesic_solver = geodesic_solver,
+                    reduction="none", device=device, 
+                    periodicity_mode=periodicity_mode,
+                    return_geodesic_curve=True) 
+        lengths_of_geodesics = lengths_of_geodesics.cpu() # shape (N,K)
+        geodesic_curve = geodesic_curve.cpu()
+
+        # retrieve the class membership of each point by finding the closest cluster centroid 
+        cluster_index_of_each_point = torch.argmin(lengths_of_geodesics, dim=1) # shape (N)
+        batch_indices = torch.arange(N) # this is needed, since   geodesic_curve[:, cluster_index_of_each_point, :, :] will produce a tensor of shape (N,N,step_count,d)
+        # pick only geodesics connecting points to cluster relevant centroids where the points are assigned
+        geodesics_to_nearest_centroids = geodesic_curve[batch_indices, cluster_index_of_each_point, :, :].detach() # shape (N,step_count,d)
+
+        # v is the direction to move the cluster centroids # shape (N,d)
+        v = geodesics_to_nearest_centroids[:,-1,:] - geodesics_to_nearest_centroids[:,-2,:]
+        v = v / v.norm(dim=1).unsqueeze(-1) # find the last segments of the geod shape (N,d)
+        
+        # Compute weighted Frechet mean gradient for each cluster
+        weighted_v = lengths_of_geodesics[:, 0].unsqueeze(-1) * v  # Shape: (N, d)
+        # Create a one-hot encoding of the cluster indices
+        one_hot_clusters = torch.nn.functional.one_hot(cluster_index_of_each_point, num_classes=K).float()  # Shape: (N, K)
+        # Compute the gradients for each cluster
+        Frechet_mean_gradient = one_hot_clusters.T @ weighted_v  # Shape: (K, d)
+        # Update cluster centroids
+        with torch.no_grad():
+            current_centroids += - beta * Frechet_mean_gradient  # Update all centroids simultaneously
+
+        # Compute average Frechet mean gradient norm among the K clusters on step iter_outer 
+        average_Frechet_mean_gradient_norm = (Frechet_mean_gradient.norm(dim=1).mean()).item()
+
+        # saving the lengths of geodesics_to_nearest_centroids
+        geodesics_to_nearest_centroids_lengths = lengths_of_geodesics[batch_indices, cluster_index_of_each_point]
+        
+        # save intra-class variance
+        intraclass_variance = (1/N) * energies_of_geodesics[batch_indices, cluster_index_of_each_point]
+        
+        #compute the sum of geodesic length for each cluster
+        #scatter_add_ is the reverse of torch.gather
+        length_of_geodesics_to_nearest_centroids_by_cluster = torch.zeros(K, dtype=geodesics_to_nearest_centroids_lengths.dtype)
+        length_of_geodesics_to_nearest_centroids_by_cluster.scatter_add_(0, cluster_index_of_each_point, geodesics_to_nearest_centroids_lengths)    
+        
+        #compute the Intra-class variance, i.e. sum of geodesic energy for each cluster
+        #scatter_add_ is the reverse of torch.gather
+        intraclass_variance_by_cluster = torch.zeros(K, dtype=geodesics_to_nearest_centroids_lengths.dtype)
+        intraclass_variance_by_cluster.scatter_add_(0, cluster_index_of_each_point, intraclass_variance)    
+        
+        history_item = {
+            "intraclass_variance"                              : intraclass_variance.detach().sum().numpy(),
+            "intraclass_variance_by_cluster"                   : intraclass_variance_by_cluster.unsqueeze(0).detach().numpy(), 
+            "norm_Frechet_mean_gradient"                       : average_Frechet_mean_gradient_norm,
+            "geodesics_to_nearest_centroids_lengths"           : geodesics_to_nearest_centroids_lengths.detach().sum().numpy(),
+            "geodesics_to_nearest_centroids_lengths_by_cluster": length_of_geodesics_to_nearest_centroids_by_cluster.unsqueeze(0).detach().numpy()
+        }
+        history.append( history_item )
+        t.set_description(f"Outer Loop iteration: {iter_outer+1}, Centroid gradient norm:{average_Frechet_mean_gradient_norm:.4f}, Total geodesic energy:{loss_geodesics:.4f}")  # Update description dynamically
+    #timing
+    end_time = time.time()
+    algorithm_execution_time = end_time - start_time
+    results = {
+        "Riemannian_k_means_labels": cluster_index_of_each_point.tolist(), 
+        "history": history, 
+        "geodesic_curve": geodesic_curve, 
+        "time_secs": algorithm_execution_time
+    }
+    return results
+
+
+def Riemannian_k_means_losses_plot(history, Path_pictures, verbose = False):
+    norm_Frechet_mean_gradient_history = []
+    geodesics_to_nearest_centroids_lengths_by_cluster_history = []
+    geodesics_to_nearest_centroids_lengths_history = []
+    intraclass_variance_by_cluster_history = []
+    intraclass_variance_history = []
+    for i in range(len(history)):
+        norm_Frechet_mean_gradient_history.append(history[i]["norm_Frechet_mean_gradient"])
+        geodesics_to_nearest_centroids_lengths_by_cluster_history.append(history[i]["geodesics_to_nearest_centroids_lengths_by_cluster"])
+        geodesics_to_nearest_centroids_lengths_history.append(history[i]["geodesics_to_nearest_centroids_lengths"])
+        intraclass_variance_by_cluster_history.append(history[i]["intraclass_variance_by_cluster"])
+        intraclass_variance_history.append(history[i]["intraclass_variance"])
+
+    #plotting 
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))  # Create a figure with 1 row and 3 columns
+
+    # Plot norm_Frechet_mean_gradient_history
+    axes[0].plot(norm_Frechet_mean_gradient_history, marker='o', markersize=3) 
+    axes[0].set_title('Average norm of gradients of centroids')
+    axes[0].set_xlabel('Outer loop iterations')
+    axes[0].set_ylabel('Loss')
+
+    # Plot geodesics_to_nearest_centroids lengths by cluster
+    # Generate a color palette with distinct colors
+    K = len(intraclass_variance_by_cluster_history[0])
+    colors = plt.cm.jet(torch.linspace(0, 1, K))  # Use a colormap (e.g., 'viridis')
+
+    #lengths_of_geodesics_to_nearest_centroids_concatenated = torch.cat((geodesics_to_nearest_centroids_lengths_by_cluster_history), dim=0).detach()
+    lengths_of_geodesics_to_nearest_centroids_concatenated = np.concatenate(geodesics_to_nearest_centroids_lengths_by_cluster_history)
+    for i in range(K):
+        axes[1].plot(lengths_of_geodesics_to_nearest_centroids_concatenated[:, i],marker='o',markersize=3,
+                        label=f'Lengths of geodesics in cluster {i}', color=colors[i])
+    axes[1].set_xlabel('Outer Loop Iterations')
+    axes[1].set_ylabel('Loss')
+    axes[1].legend()
+
+    # Plot geodesics_to_nearest_centroids_lengths_history
+    axes[1].plot(geodesics_to_nearest_centroids_lengths_history, marker='o', markersize=3, 
+                label='Lengths of geodesics in all clusters', color='green')
+    axes[1].set_title('Lengths of geodesics to nearest centroids')
+    axes[1].set_xlabel('Outer loop iterations')
+    axes[1].legend(loc= 'upper right')
+
+    intraclass_variance_concatenated = np.concatenate(intraclass_variance_by_cluster_history)
+    #torch.cat((intraclass_variance_by_cluster_history), dim=0).detach()
+    for i in range(K):
+        axes[2].plot(intraclass_variance_concatenated[:, i],marker='o',markersize=3,
+                        label=f'Variance of geodesics of cluster {i} ', color=colors[i])
+    axes[2].set_xlabel('Outer Loop Iterations')
+    axes[2].set_ylabel('Loss')
+    axes[2].legend()
+
+    # Plot geodesics_to_nearest_centroids_lengths_history
+    axes[2].plot(intraclass_variance_history, marker='o', markersize=3,
+                label='Intra-class variance', color='green')
+    axes[2].set_title('Intra-class variances')
+    axes[2].set_xlabel('Outer loop iterations')
+    axes[2].legend()
+
+    # Adjust layout
+    plt.tight_layout()
+    if Path_pictures!=None:
+        plt.savefig(f"{Path_pictures}/kmeans_losses.pdf",bbox_inches='tight', format="pdf")
+    if verbose == True:
+        plt.show()
+    else:
+        plt.close()
+    return

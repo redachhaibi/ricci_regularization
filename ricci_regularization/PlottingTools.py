@@ -9,133 +9,217 @@ def make_grid(numsteps,
               xcenter = 0.0, ycenter = 0.0,
               xsize =  3.0, ysize = 3.0,
               xshift = 0.0, yshift = 0.0):
+    """
+    Generate a 2D grid of points within a specified range.
+    
+    Parameters:
+    - numsteps: Number of steps (grid points) along each axis.
+    - xcenter, ycenter: Center coordinates of the grid.
+    - xsize, ysize: Total width and height of the grid.
+    - xshift, yshift: Optional shifts to move the grid in x or y direction.
+
+    Returns:
+    - tgrid: A tensor containing the grid points in (x, y) coordinate pairs.
+    """
     
     xs = torch.linspace(xcenter - 0.5*xsize, xcenter + 0.5*xsize, steps = numsteps) + xshift
     ys = torch.linspace(ycenter - 0.5*ysize, ycenter + 0.5*ysize, steps = numsteps) + yshift
     
-    # true grid starts from left bottom corner. x is the first to increase
+    # True grid starts from the bottom-left corner. x is the first to increase.
     tgrid = torch.cartesian_prod(ys, xs)
-    tgrid = tgrid.roll(1,1)
+    tgrid = tgrid.roll(1, 1)
     return tgrid
 
-def draw_frob_norm_tensor_on_grid(plot_name,tensor_on_grid, numsteps = 100,xshift = 0.0, yshift = 0.0):
-    Frob_norm_on_grid = tensor_on_grid.norm(dim=(1,2)).view(numsteps,numsteps)
-    #Frob_norm_on_grid = metric_on_grid.norm(dim=(1,2)).view(numsteps,numsteps)
-    Frob_norm_on_grid = Frob_norm_on_grid[1:-1,1:-1].detach()
+def draw_frob_norm_tensor_on_grid(plot_name, tensor_on_grid, numsteps=100, xshift=0.0, yshift=0.0):
+    """
+    Visualize the Frobenius norm of a tensor defined on a 2D grid.
+
+    Parameters:
+    - plot_name: Title of the plot.
+    - tensor_on_grid: A tensor with shape (numsteps^2, d1, d2), where (d1, d2) are dimensions per grid point.
+    - numsteps: Number of steps (grid points) along each axis.
+    - xshift, yshift: Optional shifts to adjust axis labels.
+
+    Returns:
+    - A matplotlib plot displaying the Frobenius norm of the tensor on the grid.
+    """
+    
+    Frob_norm_on_grid = tensor_on_grid.norm(dim=(1,2)).view(numsteps, numsteps)
+    Frob_norm_on_grid = Frob_norm_on_grid[1:-1, 1:-1].detach()
 
     fig, ax = plt.subplots()
-    im = ax.imshow(Frob_norm_on_grid,origin="lower")
+    im = ax.imshow(Frob_norm_on_grid, origin="lower")
 
     cbar = ax.figure.colorbar(im)
-    
-    ax.set_xticks((Frob_norm_on_grid.shape[0]-1)*(np.linspace(0,1,num=11)),labels=(np.linspace(-1.5,1.5,num=11)+xshift).round(1))
-    ax.set_yticks((Frob_norm_on_grid.shape[1]-1)*(np.linspace(0,1,num=11)),labels=(np.linspace(-1.5,1.5,num=11)+yshift).round(1))
-    plt.xlabel( "x coordinate")
-    plt.ylabel( "y coordinate")
+
+    ax.set_xticks((Frob_norm_on_grid.shape[0] - 1) * np.linspace(0, 1, num=11), 
+                  labels=(np.linspace(-1.5, 1.5, num=11) + xshift).round(1))
+    ax.set_yticks((Frob_norm_on_grid.shape[1] - 1) * np.linspace(0, 1, num=11), 
+                  labels=(np.linspace(-1.5, 1.5, num=11) + yshift).round(1))
+
+    plt.xlabel("x coordinate")
+    plt.ylabel("y coordinate")
     plt.axis('scaled')
 
     ax.set_title(plot_name)
     fig.tight_layout()
     plt.show()
+    
     return plt
 
-def draw_scalar_on_grid(scalar_on_grid,plot_name="my_plot", 
-        xcenter = 0.0, ycenter = 0.0,
-        xsize =  3.0, ysize = 3.0,
-        xshift = 0.0, yshift = 0.0,
-        numsteps = 100, numticks=5,
-        tick_decimals = 2):
+def draw_scalar_on_grid(scalar_on_grid, plot_name="my_plot", 
+        xcenter=0.0, ycenter=0.0,
+        xsize=3.0, ysize=3.0,
+        xshift=0.0, yshift=0.0,
+        numsteps=100, numticks=5,
+        tick_decimals=2):
+    """
+    Visualize a scalar field on a 2D grid using a heatmap.
+
+    Parameters:
+    - scalar_on_grid: A 2D tensor representing scalar values on the grid.
+    - plot_name: Title of the plot.
+    - xcenter, ycenter: Center coordinates of the grid.
+    - xsize, ysize: Total width and height of the grid.
+    - xshift, yshift: Optional shifts to adjust axis labels.
+    - numsteps: Number of steps (grid points) along each axis.
+    - numticks: Number of tick marks on each axis.
+    - tick_decimals: Number of decimal places for tick labels.
+
+    Returns:
+    - A matplotlib plot displaying the scalar field as a heatmap.
+    """
 
     scalar_on_grid = scalar_on_grid.detach()
 
     fig, ax = plt.subplots()
-    im = ax.imshow(scalar_on_grid,origin="lower")
+    im = ax.imshow(scalar_on_grid, origin="lower")
 
     cbar = ax.figure.colorbar(im)
-    
-    xticks = np.linspace(xcenter - 0.5*xsize, xcenter + 0.5*xsize, numticks) 
-    yticks = np.linspace(ycenter - 0.5*ysize, ycenter + 0.5*ysize, numticks)
 
-    #xtick_labels = torch.round(xticks+xshift,decimals=tick_decimals)
-    #ytick_labels = torch.round(yticks+yshift,decimals=tick_decimals)
-    #print(xtick_labels)
+    xticks = np.linspace(xcenter - 0.5 * xsize, xcenter + 0.5 * xsize, numticks)
+    yticks = np.linspace(ycenter - 0.5 * ysize, ycenter + 0.5 * ysize, numticks)
 
-    # this weird thing is done because 
-    # torch.rand + torch.tolist does not do the rounding in fact!!
-    
-    xtick_labels = (xticks+xshift).tolist()
-    ytick_labels = (yticks+yshift).tolist()
+    # Convert tick labels to strings with the specified decimal precision
+    xtick_labels = [f"{elem:.{tick_decimals}f}" for elem in (xticks + xshift).tolist()]
+    ytick_labels = [f"{elem:.{tick_decimals}f}" for elem in (yticks + yshift).tolist()]
 
-    xtick_labels = [ '%.{0}f'.format(tick_decimals) % elem for elem in xtick_labels ]
-    ytick_labels = [ '%.{0}f'.format(tick_decimals) % elem for elem in ytick_labels]
+    ticks_places = np.linspace(0, 1, numticks) * (numsteps - 1)
 
-    ticks_places = np.linspace(0, 1, numticks)*(numsteps-1)
+    ax.set_xticks(ticks_places, labels=xtick_labels)
+    ax.set_yticks(ticks_places, labels=ytick_labels)
 
-    ax.set_xticks(ticks_places,labels = xtick_labels)
-    ax.set_yticks(ticks_places,labels = ytick_labels)
-
-    plt.xlabel( "x coordinate")
-    plt.ylabel( "y coordinate")
+    plt.xlabel("x coordinate")
+    plt.ylabel("y coordinate")
     plt.axis('scaled')
 
     ax.set_title(plot_name)
     fig.tight_layout()
     plt.show()
+
     return plt
 
 
-# plot recostructions for mnist dataset
-def plot_ae_outputs(test_dataset,encoder,decoder,n=10,D=784):
-    plt.figure(figsize=(16*n/10,4.5))
-    targets = test_dataset.targets.numpy()
-    t_idx = {i:np.where(targets==i)[0][0] for i in range(n)}
-    for i in range(n):
-      ax = plt.subplot(2,n,i+1)
-      img = test_dataset[t_idx[i]][0].unsqueeze(0)
-      #encoder.eval()
-      #decoder.eval()
-      with torch.no_grad():
-         #rec_img  = decoder(encoder(img))
-         rec_img  = decoder(encoder(img.reshape(1,D))).reshape(1,28,28)
-      plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
-      ax.get_xaxis().set_visible(False)
-      ax.get_yaxis().set_visible(False)  
-      if i == n//2:
-        ax.set_title('Original images')
-      ax = plt.subplot(2, n, i + 1 + n)
-      plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')  
-      ax.get_xaxis().set_visible(False)
-      ax.get_yaxis().set_visible(False)  
-      if i == n//2:
-         ax.set_title('Reconstructed images')
-    plt.show()
 
-def plot_ae_outputs_selected(test_dataset,encoder,decoder,targets=None,selected_labels = None,D=784,dpi=400):
-    if selected_labels is None:
-        n = 10
-    else:
-        n = len(selected_labels)
-    plt.figure(figsize=(6 * n / 10, 1.5), dpi=dpi)
-    if targets == None:
-        targets = test_dataset.targets.numpy()
-    t_idx = {i: np.where(targets == i)[0][0] for i in selected_labels}
+# plot recostructions for mnist dataset
+def plot_ae_outputs(test_dataset, encoder, decoder, n=10, D=784):
+    """
+    Plot original and reconstructed images using an autoencoder.
+
+    Parameters:
+    - test_dataset: A dataset containing test images and their labels.
+    - encoder: Trained encoder model.
+    - decoder: Trained decoder model.
+    - n: Number of different digits to visualize (default: 10).
+    - D: Flattened image dimension (default: 784 for 28x28 images).
+
+    Returns:
+    - A matplotlib plot displaying original images (top row) 
+      and their corresponding reconstructed images (bottom row).
+    """
+
+    plt.figure(figsize=(16 * n / 10, 4.5))
+    targets = test_dataset.targets.numpy()
+    t_idx = {i: np.where(targets == i)[0][0] for i in range(n)}
+
     for i in range(n):
         ax = plt.subplot(2, n, i + 1)
-        img = test_dataset[t_idx[selected_labels[i]]][0].unsqueeze(0)
+        img = test_dataset[t_idx[i]][0].unsqueeze(0)
+
         with torch.no_grad():
             rec_img = decoder(encoder(img.reshape(1, D))).reshape(1, 28, 28)
+
         plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+
         if i == n // 2:
-            ax.set_title('Original images', fontsize=6)
+            ax.set_title('Original images')
+
         ax = plt.subplot(2, n, i + 1 + n)
         plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+
+        if i == n // 2:
+            ax.set_title('Reconstructed images')
+
+    plt.show()
+
+def plot_ae_outputs_selected(test_dataset, encoder, decoder, targets=None, selected_labels=None, D=784, dpi=400):
+    """
+    Plot original and reconstructed images for selected labels using an autoencoder.
+
+    Parameters:
+    - test_dataset: A dataset containing test images and their labels.
+    - encoder: Trained encoder model.
+    - decoder: Trained decoder model.
+    - targets: Optional, array of target labels corresponding to the dataset.
+    - selected_labels: List of specific labels to visualize. If None, defaults to 10 labels.
+    - D: Flattened image dimension (default: 784 for 28x28 images).
+    - dpi: Resolution of the plot.
+
+    Returns:
+    - A matplotlib subplot displaying selected original images (top row) 
+      and their corresponding reconstructed images (bottom row).
+    """
+
+    if selected_labels is None:
+        n = 10  # Default number of images
+    else:
+        n = len(selected_labels)
+
+    plt.figure(figsize=(6 * n / 10, 1.5), dpi=dpi)
+
+    if targets is None:
+        targets = test_dataset.targets.numpy()
+
+    t_idx = {i: np.where(targets == i)[0][0] for i in selected_labels}
+
+    for i in range(n):
+        ax = plt.subplot(2, n, i + 1)
+        img = test_dataset[t_idx[selected_labels[i]]][0].unsqueeze(0)
+
+        with torch.no_grad():
+            rec_img = decoder(encoder(img.reshape(1, D))).reshape(1, 28, 28)
+
+        plt.imshow(img.cpu().squeeze().numpy(), cmap='gist_gray')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        if i == n // 2:
+            ax.set_title('Original images', fontsize=6)
+
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(rec_img.cpu().squeeze().numpy(), cmap='gist_gray')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
         if i == n // 2:
             ax.set_title('Reconstructed images', fontsize=6)
+
     return ax
+
 
 def discrete_cmap_upd(N, base_cmap=None):
     """Create an N-bin discrete colormap from the given base colormap."""
@@ -159,6 +243,8 @@ def discrete_cmap(N, base_cmap=None, bright_colors = False):
 
     cmap_name = base.name + str(N)
     return base.from_list(cmap_name, color_list, N)
+
+"""
 def plot3losses(mse_train_list,uniform_train_list,curv_train_list):
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6,18))
     
@@ -216,6 +302,7 @@ def plot9losses(mse_train_list,curv_train_list,g_inv_train_list,numwindows1=50,n
     fig.show()
     return fig,axes
 
+    
 def plotlosses(**dict_of_losses):
     number_of_plots = len(dict_of_losses)
     fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(6, number_of_plots*6))
@@ -230,6 +317,7 @@ def plotlosses(**dict_of_losses):
         i += 1
     plt.show()
     return fig,axes
+"""
 
 def plotfromdict(dict_of_losses):
     number_of_plots = len(dict_of_losses)
@@ -408,47 +496,6 @@ def PlotSmartConvolve(dictplots,test_dictplots = None,
     plt.show()
     return fig,axes
 
-
-# to be deprecated
-def PlotSmartConvolve_old(dictplots, numwindows1 = 50, numwindows2 = 200):
-    number_of_plots = len(dictplots)
-    fig, axes = plt.subplots(nrows=number_of_plots, ncols=3, figsize=(4*3, number_of_plots*4))
-    
-    win = [signal.windows.hann(1), signal.windows.hann(numwindows1), signal.windows.hann(numwindows2)]  # convolution window size
-    i = 0
-    color_iterable = iter(mcolors.TABLEAU_COLORS)
-    for plot_name,plot_info in dictplots.items():
-        #if number_of_plots == 1:
-        #    axes = [axes]
-        
-        for legend, curve in plot_info["data"].items(): 
-            try:
-                newcolor = next(color_iterable)
-            except StopIteration:
-                color_iterable = iter(mcolors.TABLEAU_COLORS)
-                newcolor = next(color_iterable)
-            #end except
-                
-            if legend=="max":
-                linestyle = 'dashed'
-            else:
-                linestyle = 'solid'
-            for j in range(3):
-                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='valid') / sum(win[j]), color = newcolor,label = legend,ls = linestyle)
-                #axes[i,j].semilogy(curve, color = newcolor,label = legend,ls = linestyle)
-                axes[i,j].set_xlabel('Batches')
-            #end for
-        #end for
-        axes[i,0].set_ylabel(plot_info["yname_latex"])
-        axes[i,0].legend(loc="lower left")
-        i += 1
-    plt.show()
-    return fig,axes
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
 def point_plot(encoder, data_loader, batch_idx, config,
         show_title=True, colormap='jet', normalize_to_unit_square = False, 
         s=40, draw_grid=False, figsize=(9, 9)):
@@ -515,75 +562,6 @@ def point_plot(encoder, data_loader, batch_idx, config,
         cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing = "uniform")
         cbar.set_label('Cluster Label')
         cbar.set_ticklabels(selected_labels)  # Show only unique labels
-
-    # Add title if required
-    if show_title:
-        ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')
-    
-    # Enable grid if required
-    ax.grid(draw_grid)
-
-    # Adjust layout to prevent elements from being cut off
-    fig.tight_layout()
-
-    # Return the figure object
-    return fig
-
-# this function will be deprecated
-def point_plot_old(encoder, data: torch.utils.data.dataset.Subset, dataset_name, 
-               batch_idx, config, device, show_title=True, colormap='jet', 
-               s=40, draw_grid=False, figsize=(9, 9)):
-    # Plotting the latent embedding of "data" using the encoder function in "encoder"
-    # params of the dataset taken from YAML file "config"
-    # Extract labels and data from the dataset
-    #labels = data[:][1]
-    #data = data[:][0]
-    if dataset_name == "Synthetic":
-        labels = data.dataset.tensors[1]
-        data = data.dataset.tensors[0]
-    elif dataset_name in ["MNIST01", "MNIST_subset"]:
-        data = data.data.to(torch.float32)/255.
-        labels = data.targets
-    else:
-        labels = data.targets
-        data = data.data
-    
-    D = config["architecture"]["input_dim"]
-    dataset_name = config["dataset"]["name"]
-
-    # figure out the number of classes of data
-    if config["dataset"]["name"] == "MNIST":
-        k = 10
-    elif config["dataset"]["name"] == "MNIST01":
-        k = len(config["dataset"]["selected_labels"])
-    elif config["dataset"]["name"] == "Synthetic":
-        k = config["dataset"]["k"]
-    
-    # Perform encoding
-    with torch.no_grad():
-        data = data.view(-1, D)  # reshape the data (flatten)
-        data = data.to(device)  # Uncomment this if needed to move data to GPU/CPU
-        encoded_data = encoder(data)
-
-    # Convert to numpy for plotting
-
-    encoded_data2plot = ( encoded_data.cpu() / torch.pi ).numpy()
-    labels = labels.numpy()
-
-    #plt.rcParams.update({'font.size': 20})
-    # Create figure and axes
-    fig, ax = plt.subplots(figsize=figsize)
-    
-    # Create scatter plot
-    if dataset_name == "Swissroll":
-        sc = ax.scatter(encoded_data2plot[:, 0], encoded_data2plot[:, 1], s=s, c=labels, alpha=1.0, marker='o', edgecolor='none', cmap = colormap)
-    else:
-        sc = ax.scatter(encoded_data2plot[:, 0], encoded_data2plot[:, 1], s=s, c=labels, alpha=1.0, marker='o', edgecolor='none', cmap = discrete_cmap(k, colormap))
-            # a smart way to place ticks nicely on a colorbar
-        from matplotlib.colors import  BoundaryNorm
-        bounds = np.linspace(-0.5, k - 0.5, k + 1)
-        norm = BoundaryNorm(bounds, discrete_cmap(k, colormap).N)
-        cbar = plt.colorbar(sc, boundaries=bounds, norm=norm, ticks=np.arange(k))
 
     # Add title if required
     if show_title:

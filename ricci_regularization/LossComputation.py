@@ -58,7 +58,13 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
         #dict_losses["Contractive"] = torch.nn.ReLU()( outlyers_encoder_jac_norm ).max()
         dict_losses["Contractive"] = torch.nn.ReLU()( outlyers_encoder_jac_norm ).mean()
     if training_config["training_mode"]["compute_curvature"] == True:
-        encoded_points_no_grad = torus_ae.encoder2lifting(data).detach()
+        if training_config["training_mode"]["uniform_OOD_smaplig_flag"] == True:
+            num_sampled_points = training_config["OOD_settings"]["n_OOD"]
+            d = training_config["architecture"]["latent_dim"]
+            sampled_points = (torch.rand((num_sampled_points, d)) * (2 * torch.pi)) - torch.pi
+            encoded_points_no_grad = sampled_points.to(data.device) 
+        else:
+            encoded_points_no_grad = torus_ae.encoder_to_lifting(data).detach()
         if training_config["training_mode"]["curvature_computation_mode"] == "jacfwd":        
             #Sc_on_data, metric_on_data = ricci_regularization.Sc_g_jacfwd(encoded_points_no_grad,
             #                                function=torus_ae.decoder_torus,eps=training_config["loss_settings"]["eps"])
@@ -79,7 +85,7 @@ def loss_function(recon_data, data, z, torus_ae, training_config):
                                                         function=torus_ae.decoder_torus, h = 0.01, eps=training_config["loss_settings"]["eps"])
     if training_config["training_mode"]["diagnostic_mode"] == True:
         if training_config["training_mode"]["compute_curvature"] == False:
-            encoded_points_no_grad = torus_ae.encoder2lifting(data).detach()
+            encoded_points_no_grad = torus_ae.encoder_to_lifting(data).detach()
             metric_on_data = ricci_regularization.metric_jacfwd_vmap(encoded_points_no_grad,
                                                                      function = torus_ae.decoder_torus)
             det_on_data = torch.det(metric_on_data)    
@@ -121,7 +127,7 @@ def train(torus_ae, training_config, train_loader, optimizer,
     if training_config["training_mode"]["OOD_regime"] == True:
         first_batch,_ = next(iter(train_loader))
         first_batch = first_batch.to(device)
-        extreme_curv_points_tensor = torus_ae.encoder2lifting(first_batch.view(-1,training_config["architecture"]["input_dim"])[:training_config["OOD_settings"]["N_extr"]]).detach()
+        extreme_curv_points_tensor = torus_ae.encoder_to_lifting(first_batch.view(-1,training_config["architecture"]["input_dim"])[:training_config["OOD_settings"]["N_extr"]]).detach()
         extreme_curv_points_tensor.to(device)
         extreme_curv_value_tensor,_ = ricci_regularization.Sc_g_jacfwd_vmap(extreme_curv_points_tensor, 
                 function=torus_ae.decoder_torus,eps=training_config["loss_settings"]["eps"])
@@ -166,7 +172,7 @@ def train(torus_ae, training_config, train_loader, optimizer,
                 extreme_curv_points_tensor = extreme_curv_points_tensor,
                 extreme_curv_value_tensor = extreme_curv_value_tensor,
                 batch_idx = batch_idx,
-                encoder=torus_ae.encoder2lifting,decoder = torus_ae.decoder_torus,
+                encoder=torus_ae.encoder_to_lifting,decoder = torus_ae.decoder_torus,
                 OOD_params_dict = training_config["OOD_settings"],
                 output_dim=training_config["architecture"]["input_dim"])
             
@@ -201,7 +207,8 @@ def test(torus_ae, test_loader, training_config, dict_loss_arrays = {}, batch_id
         data = data.to(device)
         data = data.reshape(-1, training_config["architecture"]["input_dim"])
         recon_batch, z = torus_ae(data)
-        dict_losses = loss_function(recon_batch, data, z,torus_ae = torus_ae, training_config=training_config)
+        dict_losses = loss_function(recon_batch, data, z, 
+                torus_ae = torus_ae, training_config=training_config)
         # appending current losses to loss history    
         for key in dict_losses.keys():
             if batch_idx == 0:
