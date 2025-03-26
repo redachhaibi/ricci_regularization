@@ -244,270 +244,249 @@ def discrete_cmap(N, base_cmap=None, bright_colors = False):
     cmap_name = base.name + str(N)
     return base.from_list(cmap_name, color_list, N)
 
-"""
-def plot3losses(mse_train_list,uniform_train_list,curv_train_list):
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6,18))
-    
-    axes[0].semilogy(mse_train_list, color = 'tab:red')
-    axes[0].set_ylabel('MSE')
-    
-    axes[1].semilogy(uniform_train_list, color = 'tab:olive')
-    axes[1].set_ylabel('Equidistribution loss')
-    
-    axes[2].semilogy(curv_train_list, color = 'tab:blue')
-    axes[2].set_ylabel('Curvature')
-    for i in range(3):
-        axes[i].set_xlabel('Batches')
-    #fig.show()
-    plt.show()
-    return fig,axes
-
-def plot9losses(mse_train_list,curv_train_list,g_inv_train_list,numwindows1=50,numwindows2=200):
-    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18,18))
-    
-    win50 = signal.windows.hann(numwindows1)
-    win200 = signal.windows.hann(numwindows2)
-
-    axes[0,0].semilogy(mse_train_list, color = 'tab:red')
-    axes[0,0].set_ylabel('MSE')
-
-    axes[0,1].semilogy(signal.convolve(mse_train_list, win50, mode='same') / sum(win50), color = 'tab:red')
-    #axes[0,1].set_ylabel('MSE')
-
-    axes[0,2].semilogy(signal.convolve(mse_train_list, win200, mode='same') / sum(win200), color = 'tab:red')
-    #axes[0,2].set_ylabel('MSE')
-    
-    axes[1,0].semilogy(curv_train_list, color = 'tab:olive')
-    axes[1,0].set_ylabel('Curvature')
-
-    axes[1,1].semilogy(signal.convolve(curv_train_list, win50, mode='same') / sum(win50), color = 'tab:olive')
-    #axes[1,1].set_ylabel('Curvature')
-
-    axes[1,2].semilogy(signal.convolve(curv_train_list, win200, mode='same') / sum(win200), color = 'tab:olive')
-    #axes[1,2].set_ylabel('Curvature')
-    
-    axes[2,0].semilogy(g_inv_train_list, color = 'tab:blue')
-    axes[2,0].set_ylabel('$\|G^{-1}\|_F$')
-
-    axes[2,1].semilogy(signal.convolve(g_inv_train_list, win50, mode='same') / sum(win50), color = 'tab:blue')
-    #axes[2,1].set_ylabel('$\|G^{-1}\|_F$')
-
-    axes[2,2].semilogy(signal.convolve(g_inv_train_list, win200, mode='same') / sum(win200), color = 'tab:blue')
-    #axes[2,2].set_ylabel('$\|G^{-1}\|_F$')
-
-    for i in range(3):
-        for j in range(3):
-            if i==2:
-                axes[i,j].set_xlabel('Batches')
-    fig.show()
-    return fig,axes
-
-    
-def plotlosses(**dict_of_losses):
-    number_of_plots = len(dict_of_losses)
-    fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(6, number_of_plots*6))
-    i = 0
-    color_iterable = iter(mcolors.TABLEAU_COLORS)
-    for name,loss_list in dict_of_losses.items():
-        if number_of_plots == 1:
-            axes = [axes]
-        axes[i].semilogy(loss_list, color = next(color_iterable))
-        axes[i].set_ylabel(name)
-        axes[i].set_xlabel('Batches')
-        i += 1
-    plt.show()
-    return fig,axes
-"""
-
+# this function is not used but can be used for fast and direct loss plotting from dict
 def plotfromdict(dict_of_losses):
-    number_of_plots = len(dict_of_losses)
-    fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(6, number_of_plots*6))
-    i = 0
-    color_iterable = iter(mcolors.TABLEAU_COLORS)
-    for name,loss_list in dict_of_losses.items():
+    """
+    Plots multiple loss curves from a dictionary of loss lists.
+
+    Parameters:
+        dict_of_losses (dict): A dictionary where keys are loss names (str) 
+                               and values are lists of loss values.
+
+    Returns:
+        fig, axes: The created matplotlib figure and axes.
+    """
+
+    number_of_plots = len(dict_of_losses)  # Determine the number of subplots needed
+    fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(6, number_of_plots * 6))  
+    # Create subplots with dynamic height
+    i = 0  
+    color_iterable = iter(mcolors.TABLEAU_COLORS)  # Get an iterable for colors
+    for name, loss_list in dict_of_losses.items():  
         if number_of_plots == 1:
-            axes = [axes]
+            axes = [axes]  # Ensure axes is always iterable when there's only one plot
+
         try:
-            newcolor = next(color_iterable)
+            newcolor = next(color_iterable)  # Assign a new color to the plot
         except StopIteration:
+            # Reset the color iterator if it runs out of colors
             color_iterable = iter(mcolors.TABLEAU_COLORS)
             newcolor = next(color_iterable)
-        axes[i].semilogy(loss_list, color = newcolor)
-        axes[i].set_ylabel(name)
-        axes[i].set_xlabel('Batches')
-        i += 1
-    plt.show()
-    return fig,axes
+
+        axes[i].semilogy(loss_list, color=newcolor)  # Plot loss on a semi-log scale
+        axes[i].set_ylabel(name)  # Label the y-axis with the loss name
+        axes[i].set_xlabel('Batches')  # Label the x-axis as 'Batches'
+        i += 1  
+    plt.show()  
+    return fig, axes  
 
 def plotsmart(dictplots):
-    number_of_plots = len(dictplots)
-    fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(4, number_of_plots*4))
-    i = 0
-    color_iterable = iter(mcolors.TABLEAU_COLORS)
-    for plot_name,plot_info in dictplots.items():
-        if number_of_plots == 1:
-            axes = [axes]
-        
-        for legend, curve in plot_info["data"].items(): 
-            try:
-                newcolor = next(color_iterable)
-            except StopIteration:
-                color_iterable = iter(mcolors.TABLEAU_COLORS)
-                newcolor = next(color_iterable)
-            #end except
-                
-            if (legend=="max")|(legend=="min"):
-                linestyle = 'dashed'
-            else:
-                linestyle = 'solid'
-            axes[i].semilogy(curve, color = newcolor,label = legend,ls = linestyle)
-        #end for
-        axes[i].set_ylabel(plot_info["yname_latex"])
-        axes[i].set_xlabel('Batches')
-        axes[i].legend(loc="lower left")
-        i += 1
-    plt.show()
-    return fig,axes
+    """
+    Plots multiple datasets from a dictionary, using semi-log scale.
 
+    Parameters:
+        dictplots (dict): A dictionary where each key is a plot name, 
+                          and each value is another dictionary with:
+                          - "data": A dictionary of curves (keys are legends, values are lists of data points).
+                          - "yname_latex": Label for the y-axis.
+
+    Returns:
+        fig, axes: The created matplotlib figure and axes.
+    """
+    number_of_plots = len(dictplots)  # Number of subplots required
+    fig, axes = plt.subplots(nrows=number_of_plots, ncols=1, figsize=(4, number_of_plots * 4))  # Create subplots with dynamic height
+    i = 0  
+    color_iterable = iter(mcolors.TABLEAU_COLORS)  # Iterable for color selection
+    for plot_name, plot_info in dictplots.items():  
+        if number_of_plots == 1:
+            axes = [axes]  # Ensure `axes` is always iterable when there's only one plot
+        for legend, curve in plot_info["data"].items():  
+            try:
+                newcolor = next(color_iterable)  # Assign a new color to each curve
+            except StopIteration:
+                color_iterable = iter(mcolors.TABLEAU_COLORS)  # Reset color iterator if colors run out
+                newcolor = next(color_iterable)
+            linestyle = 'dashed' if legend in {"max", "min"} else 'solid'  # Determine line style based on legend type
+            axes[i].semilogy(curve, color=newcolor, label=legend, ls=linestyle)  # Plot curve with semi-log scale
+        axes[i].set_ylabel(plot_info["yname_latex"])  # Set y-axis label
+        axes[i].set_xlabel('Batches')  # Set x-axis label
+        axes[i].legend(loc="lower left")  # Add legend to the plot
+        i += 1  
+    plt.show()  
+    return fig, axes  # Return the figure and axes for further modifications if needed
 
 def translate_dict(dict_losses_to_plot, eps = 0):
+    """
+    Translates a dictionary of loss values into a format suitable for plotting.
+    
+    Parameters:
+        dict_losses_to_plot (dict): Dictionary containing the loss values for various metrics.
+        eps (float): A parameter used in some of the loss plots (default is 0).
+
+    Returns:
+        dictplots (dict): A dictionary structured for plotting, with each plot containing
+                          its respective loss data and labels.
+    """
+    # Construct the dictionary with various plot configurations
     dictplots = {
-    "plot1": {
-        "yname_latex": "MSE",
-        "data": {
-            "MSE": dict_losses_to_plot["MSE"]
+        "plot1": {
+            "yname_latex": "MSE",  # Label for y-axis
+            "data": {
+                "MSE": dict_losses_to_plot["MSE"]  # Loss data for MSE
+            }
+        },
+        "plot2": {
+            "yname_latex": "$\mathcal{L}_\mathrm{equi}$",  # Label for Equidistribution loss
+            "data": {
+                "$\widehat\mathcal{L}_\mathrm{equi}$": dict_losses_to_plot["Equidistribution"]  # Data for Equidistribution loss
+            }
+        },
+        "plot3": {
+            "yname_latex": "$\mathcal{L}_\mathrm{contractive}$",  # Label for Contractive loss
+            "data": {"$\widehat\mathcal{L}_\mathrm{contractive}$": dict_losses_to_plot.get("Contractive")}  # Data for Contractive loss
+        },
+        "plot4": {
+            "yname_latex": "$\mathcal{L}_\mathrm{curv}$",  # Label for Curvature loss
+            "data": {"$\widehat\mathcal{L}_\mathrm{curv}$": dict_losses_to_plot.get("Curvature")}  # Data for Curvature loss
+        },
+        "plot5": {
+            "yname_latex": "$\det(g)$",  # Label for determinant of 'g'
+            "data": {k: dict_losses_to_plot.get(k) for k in ["g_det_mean", "g_det_max", "g_det_min"]}  # Data for determinant of 'g'
+        },
+        "plot6": {
+            "yname_latex": rf"$\|g_{{reg}}^{{-1}}\|_F, \ \varepsilon = {eps}$",  # Label for regularized inverse norm
+            "data": {k: dict_losses_to_plot.get(k) for k in ["g_inv_norm_mean", "g_inv_norm_max"]}  # Data for g inverse norm
+        },
+        "plot7": {
+            "yname_latex": r"$\|\nabla \Psi \|^2_F = \mathrm{tr} (g) $",  # Label for decoder Jacobian norm
+            "data": {k: dict_losses_to_plot.get(k) for k in ["decoder_jac_norm_mean", "decoder_jac_norm_max"]}  # Data for decoder Jacobian norm
+        },
+        "plot8": {
+            "yname_latex": r"$\|\nabla \Phi \|^2_F $",  # Label for encoder Jacobian norm
+            "data": {k: dict_losses_to_plot.get(k) for k in ["encoder_jac_norm_mean", "encoder_jac_norm_max"]}  # Data for encoder Jacobian norm
+        },
+        "plot9": {
+            "yname_latex": "$R^2$",  # Label for R^2
+            "data": {k: dict_losses_to_plot.get(k) for k in ["curv_squared_mean", "curv_squared_max"]}  # Data for R^2
         }
-    },
-    "plot2": {
-        "yname_latex": "$\mathcal{L}_\mathrm{equi}$",
-        "data": {
-            "$\widehat\mathcal{L}_\mathrm{equi}$": dict_losses_to_plot["Equidistribution"]
-        }
-    },
-    "plot3": {
-        "yname_latex": "$\mathcal{L}_\mathrm{contractive}$",
-        "data": {"$\widehat\mathcal{L}_\mathrm{contractive}$": dict_losses_to_plot.get("Contractive")}
-    },
-    "plot4": {
-        "yname_latex": "$\mathcal{L}_\mathrm{curv}$",
-        "data": {"$\widehat\mathcal{L}_\mathrm{curv}$": dict_losses_to_plot.get("Curvature")}
-    },
-    "plot5": {
-        "yname_latex": "$\det(g)$",
-        "data": {k: dict_losses_to_plot.get(k) for k in ["g_det_mean", "g_det_max", "g_det_min"]}
-    },
-    "plot6": {
-        "yname_latex": rf"$\|g_{{reg}}^{{-1}}\|_F, \ \varepsilon = {eps}$",
-        "data": {k: dict_losses_to_plot.get(k) for k in ["g_inv_norm_mean", "g_inv_norm_max"]}
-    },
-    "plot7": {
-        "yname_latex": r"$\|\nabla \Psi \|^2_F = \mathrm{tr} (g) $",
-        "data": {k: dict_losses_to_plot.get(k) for k in ["decoder_jac_norm_mean", "decoder_jac_norm_max"]}
-    },
-    "plot8": {
-        "yname_latex": r"$\|\nabla \Phi \|^2_F $",
-        "data": {k: dict_losses_to_plot.get(k) for k in ["encoder_jac_norm_mean", "encoder_jac_norm_max"]}
-    },
-    "plot9": {
-            "yname_latex": "$R^2$", 
-            "data": {k: dict_losses_to_plot.get(k) for k in ["curv_squared_mean", "curv_squared_max"]}
     }
-    }
-    # Merge and filter out empty plots
-    # Iterate over dict2 and collect the keys to remove
-    keys_to_remove = []
+
+    # Merge and filter out empty plots (i.e., plots where no data exists)
+    keys_to_remove = []  # List to keep track of keys to remove
+
+    # Iterate over dictplots and check if any "data" contains None values (i.e., missing data)
     for key, values in dictplots.items():
         if None in values["data"].values():  # Check if there are any None values in the "data"
-            keys_to_remove.append(key)  # Add the key to the list for later removal
+            keys_to_remove.append(key)  # Mark this key for removal
 
-    # Remove the keys after iteration
+    # Remove the keys with missing data
     for key in keys_to_remove:
-        dictplots.pop(key, None)
-    return dictplots
+        dictplots.pop(key, None)  # Remove the key if it exists in dictplots
 
+    return dictplots  # Return the filtered dictionary ready for plotting
 
-def PlotSmartConvolve(dictplots,test_dictplots = None,
-        plot_test_losses = True,
-        numwindows1 = 50, numwindows2 = 200):
+def PlotSmartConvolve(dictplots, test_dictplots=None, plot_test_losses=True,
+        numwindows1=50, numwindows2=200):
+    """
+    Plot training and testing curves with convolution smoothing applied.
+    
+    Parameters:
+        dictplots (dict): Dictionary of training data to plot.
+        test_dictplots (dict): Dictionary of test data to plot.
+        plot_test_losses (bool): Flag indicating whether to plot test losses.
+        numwindows1 (int): Size of the first convolution window.
+        numwindows2 (int): Size of the second convolution window.
+
+    Returns:
+        fig, axes: The figure and axes of the created plot.
+    """
     if plot_test_losses == True and test_dictplots == None:
         print("Set test losses dictionary to print!")
         return
     
-    number_of_plots = len(dictplots)
+    number_of_plots = len(dictplots)  # Number of plots to create
 
+    # Create a figure with multiple subplots (3 columns for each plot)
     fig, axes = plt.subplots(nrows=number_of_plots, ncols=3, figsize=(4*3, number_of_plots*4))
     
-    win = [signal.windows.hann(1), signal.windows.hann(numwindows1), signal.windows.hann(numwindows2)]  # convolution window size
+    # Define convolution windows of different sizes (Hann windows)
+    win = [signal.windows.hann(1), signal.windows.hann(numwindows1), signal.windows.hann(numwindows2)]  
+
     i = 0
-    color_iterable = iter(mcolors.TABLEAU_COLORS)
+    color_iterable = iter(mcolors.TABLEAU_COLORS)  # Color iterator for plotting
     for plot_name, plot_info in dictplots.items():
-        #if number_of_plots == 1:
-        #    axes = [axes]
-        for legend, curve in plot_info["data"].items(): 
+        for legend, curve in plot_info["data"].items():
             try:
-                newcolor = next(color_iterable)
+                newcolor = next(color_iterable)  # Get next color
             except StopIteration:
                 color_iterable = iter(mcolors.TABLEAU_COLORS)
                 newcolor = next(color_iterable)
-            #end except
-            if legend=="max":
-                linestyle = 'dashed'
-            else:
-                linestyle = 'solid'
-            # end if
+
+            linestyle = 'dashed' if legend == "max" else 'solid'  # Set line style based on legend
+
+            # Apply convolution and plot for each of the 3 windows
             for j in range(3):
-                axes[i,j].semilogy(signal.convolve(curve, win[j], mode='valid') / sum(win[j]), 
-                                   color = newcolor,
-                                   label = "Train",
-                                   ls = linestyle)
-                axes[i,j].set_xlabel('Batches')
-            # end for
-        # end for
-        axes[i,0].set_ylabel(plot_info["yname_latex"])
-        #axes[i,0].legend(loc="lower left")
+                axes[i, j].semilogy(
+                    signal.convolve(curve, win[j], mode='valid') / sum(win[j]), 
+                    color=newcolor, label="Train", ls=linestyle
+                )
+                axes[i, j].set_xlabel('Batches')
+
+        axes[i, 0].set_ylabel(plot_info["yname_latex"])
         i += 1
-    # end for
-    i=0
-    if plot_test_losses == True:    
+
+    if plot_test_losses == True:
+        i = 0
+        # Plot test losses
         for plot_name, plot_info in test_dictplots.items():
-            for legend, test_curve in plot_info["data"].items(): 
+            for legend, test_curve in plot_info["data"].items():
                 try:
                     newcolor = next(color_iterable)
                 except StopIteration:
                     color_iterable = iter(mcolors.TABLEAU_COLORS)
                     newcolor = next(color_iterable)
-                #end except
-                if legend=="max":
-                    linestyle = 'dashed'
-                else:
-                    linestyle = 'solid'
-                # end if
-                pace_ratio = len(curve)/len(test_curve)
-                test_curve_interpolated = np.interp(np.arange(len(curve)),
-                                                    np.arange(len(test_curve))*pace_ratio,
-                                                    test_curve) # to match train curve
+                
+                pace_ratio = len(curve) / len(test_curve)
+                test_curve_interpolated = np.interp(
+                    np.arange(len(curve)), np.arange(len(test_curve)) * pace_ratio, test_curve
+                )  # Interpolate test curve to match train curve length
+
+                # Apply convolution and plot for each of the 3 windows
                 for j in range(3):
-                    axes[i,j].semilogy(signal.convolve(test_curve_interpolated, win[j], mode='valid') / sum(win[j]), 
-                                    color = newcolor,
-                                    label = "Test",
-                                    ls = linestyle)
-            axes[i,0].legend(loc="lower left")
-            i+=1
-    plt.show()
-    return fig,axes
+                    axes[i, j].semilogy(
+                        signal.convolve(test_curve_interpolated, win[j], mode='valid') / sum(win[j]), 
+                        color=newcolor, label="Test", ls=linestyle
+                    )
+            axes[i, 0].legend(loc="lower left")
+            i += 1
+    
+    plt.show()  # Display the plot
+    return fig, axes  # Return the figure and axes for further modifications
 
 def point_plot(encoder, data_loader, batch_idx, config,
-        show_title=True, colormap='jet', normalize_to_unit_square = False, 
+        show_title=True, colormap='jet', normalize_to_unit_square=False, 
         s=40, draw_grid=False, figsize=(9, 9)):
-    # Plotting the latent embedding of data taken from dataloader
-    # using the encoder function in "encoder"
-    # params of the dataset taken from YAML file "config"
-    # Extract labels and data from the dataset
-    #labels = data[:][1]
-    #data = data[:][0]
+    """
+    Plots the latent space representation of data points using an encoder.
+    
+    Parameters:
+        encoder (nn.Module): The model that encodes the data.
+        data_loader (DataLoader): DataLoader providing the data.
+        batch_idx (int): Current batch index (used in title).
+        config (dict): Configuration dictionary (dataset, input dimensions).
+        show_title (bool): Flag to show the plot title.
+        colormap (str): Colormap to use for coloring the points.
+        normalize_to_unit_square (bool): Flag to normalize points to the unit square.
+        s (int): Size of the scatter plot points.
+        draw_grid (bool): Flag to enable/disable grid.
+        figsize (tuple): Size of the figure.
 
+    Returns:
+        fig: The created figure.
+    """
+    # Extract all data and labels from the data_loader
     data_tensor_list = []
-    labels_list =[]
+    labels_list = []
     for batch_data_labels in data_loader:
         batch_data, batch_labels = batch_data_labels
         data_tensor_list.append(batch_data)
@@ -520,46 +499,41 @@ def point_plot(encoder, data_loader, batch_idx, config,
 
     # Perform encoding
     with torch.no_grad():
-        data_tensor = data_tensor.view(-1, D)  # reshape the data (flatten)
+        data_tensor = data_tensor.view(-1, D)  # Flatten the data
         encoded_data = encoder(data_tensor).cpu()
 
-    # Convert to numpy for plotting
     encoded_data_to_plot = encoded_data.numpy()
     labels = labels.numpy()
     selected_labels = np.unique(labels)
 
-    #plt.rcParams.update({'font.size': 20})
-    # Create figure and axes
+    # Create a figure for plotting
     fig, ax = plt.subplots(figsize=figsize)
     
-    # checking if normalization of plotting scale is needed
-    if normalize_to_unit_square == True:
-        encoded_data = encoded_data/torch.pi
+    # Normalize if needed
+    if normalize_to_unit_square:
+        encoded_data = encoded_data / torch.pi
     else:
         ax.set_ylim(-math.pi, math.pi)
         ax.set_xlim(-math.pi, math.pi)
         ax.set_yticks([-3., -2., -1., 0., 1., 2., 3.])
         ax.set_xticks([-3., -2., -1., 0., 1., 2., 3.])
     
-    # Create scatter plot
+    # Create scatter plot with appropriate color based on dataset
     if dataset_name == "Swissroll":
         sc = ax.scatter(encoded_data_to_plot[:, 0], encoded_data_to_plot[:, 1], s=s, c=labels, alpha=1.0, 
-                        marker='o', edgecolor='none', cmap = colormap)
-    elif dataset_name in ["MNIST01", "MNIST_subset"]:
-        k = len(config["dataset"]["selected_labels"])
+                        marker='o', edgecolor='none', cmap=colormap)
+    elif dataset_name in ["MNIST01", "MNIST_subset", "MNIST"]:
+        k = len(selected_labels)
         norm = plt.Normalize(vmin=min(labels), vmax=max(labels))
         sc = ax.scatter(encoded_data_to_plot[:, 0], encoded_data_to_plot[:, 1], s=s, c=labels, alpha=1.0, 
-                        marker='o', edgecolor='none', 
-                        cmap=colormap)
-                        #cmap = discrete_cmap_upd(k, colormap))
-        # create discrete colorbar
+                        marker='o', edgecolor='none', cmap=colormap)
+        
         cmap = plt.get_cmap(colormap)
         discrete_cmap = mcolors.ListedColormap([cmap(norm(label)) for label in selected_labels])
-        # Create a ScalarMappable for the discrete colorbar
         sm = plt.cm.ScalarMappable(cmap=discrete_cmap, norm=norm)
-        sm.set_array([])  # No need for a full color scale
-        tick_positions = np.linspace(selected_labels.min(),selected_labels.max(),k)# fix the positions of top and bottom ticks.
-        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing = "uniform")
+        sm.set_array([])
+        tick_positions = np.linspace(selected_labels.min(), selected_labels.max(), k)
+        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing="uniform")
         cbar.set_label('Cluster Label')
         cbar.set_ticklabels(selected_labels)  # Show only unique labels
 
@@ -570,54 +544,66 @@ def point_plot(encoder, data_loader, batch_idx, config,
     # Enable grid if required
     ax.grid(draw_grid)
 
-    # Adjust layout to prevent elements from being cut off
+    # Adjust layout to prevent cutting off of elements
     fig.tight_layout()
 
-    # Return the figure object
+    # Return the figure
     return fig
 
-# this function is used for plotting while training
-def point_plot_fast(encoded_points,labels, 
-               batch_idx, config, show_title=True, colormap='jet', 
-               s=40, draw_grid=False, figsize=(9, 9),
-               Saving_path=None):
-    # Plotting the latent embedding of "data" using the encoder function in "encoder"
-    # params of the dataset taken from YAML file "config"
+def point_plot_fast(encoded_points, labels, batch_idx, config, show_title=True, colormap='jet', 
+               s=40, draw_grid=False, figsize=(9, 9), Saving_path=None):
+    """
+    A faster version of the point_plot function designed for plotting during training.
+
+    Parameters:
+        encoded_points (ndarray): Encoded data points to plot.
+        labels (ndarray): Corresponding labels for the data points.
+        batch_idx (int): Current batch index (used in title).
+        config (dict): Configuration dictionary (dataset, labels).
+        show_title (bool): Flag to show the plot title.
+        colormap (str): Colormap for the points.
+        s (int): Size of the scatter plot points.
+        draw_grid (bool): Flag to enable/disable grid.
+        figsize (tuple): Size of the figure.
+        Saving_path (str): Path to save the figure.
+
+    Returns:
+        fig: The created figure.
+    """
     dataset_name = config["dataset"]["name"]
 
-    #plt.rcParams.update({'font.size': 20})
-    # Create figure and axes
-    fig, ax = plt.subplots(figsize=figsize)    
-    # Create scatter plot
+    # Create figure and axes for the plot
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Plot for Swissroll or MNIST-like datasets
     if dataset_name == "Swissroll":
         sc = ax.scatter(encoded_points[:, 0], encoded_points[:, 1], s=s, c=labels, alpha=1.0, marker='o', 
-                edgecolor='none', cmap = colormap)
-    elif dataset_name in["MNIST_subset", "MNIST01","MNIST","Synthetic"]:
-        selected_labels = torch.tensor(config["dataset"]["selected_labels"])
+                        edgecolor='none', cmap=colormap)
+    elif dataset_name in ["MNIST_subset", "MNIST01", "MNIST", "Synthetic"]:
         if config["dataset"]["name"] == "MNIST":
             selected_labels = torch.arange(10)
         elif config["dataset"]["name"] == "Synthetic":
             selected_labels = torch.arange(config["dataset"]["k"])
-        k = len(selected_labels)
+        else:
+            selected_labels = torch.tensor(config["dataset"]["selected_labels"])
+        
         mask = torch.isin(labels, torch.tensor(selected_labels))
-        # Apply the mask to filter data and labels
         filtered_data = encoded_points[mask]
         filtered_labels = labels[mask]
-        sc = ax.scatter(filtered_data[:, 0], filtered_data[:, 1], s=s, c=filtered_labels, 
-                        alpha=1.0, marker='o', 
-                edgecolor='none', cmap = colormap)
+
+        sc = ax.scatter(filtered_data[:, 0], filtered_data[:, 1], s=s, c=filtered_labels, alpha=1.0, 
+                        marker='o', edgecolor='none', cmap=colormap)
         
         cmap = plt.get_cmap(colormap)
-        norm = plt.Normalize(vmin=torch.min(selected_labels).item(),
-                              vmax=torch.max(selected_labels).item())
+        norm = plt.Normalize(vmin=torch.min(selected_labels).item(), vmax=torch.max(selected_labels).item())
         discrete_cmap = mcolors.ListedColormap([cmap(norm(label)) for label in selected_labels.tolist()])
-        # Create a ScalarMappable for the discrete colorbar
         sm = plt.cm.ScalarMappable(cmap=discrete_cmap, norm=norm)
-        sm.set_array([])  # No need for a full color scale
-        tick_positions = np.linspace(selected_labels.min(),selected_labels.max(),k)# fix the positions of top and bottom ticks.
-        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing = "uniform")
+        sm.set_array([])
+        tick_positions = np.linspace(selected_labels.min(), selected_labels.max(), len(selected_labels))
+        cbar = fig.colorbar(sm, ax=ax, ticks=tick_positions, shrink=0.7, spacing="uniform")
         cbar.set_label('Cluster Label')
-        cbar.set_ticklabels(selected_labels.tolist())  # Show only unique labels
+        cbar.set_ticklabels(selected_labels.tolist())
+
     # Add title if required
     if show_title:
         ax.set_title(f'Latent space for test data in AE at batch {batch_idx}')
@@ -625,9 +611,11 @@ def point_plot_fast(encoded_points,labels,
     # Enable grid if required
     ax.grid(draw_grid)
 
-    # Adjust layout to prevent elements from being cut off
+    # Adjust layout to prevent clipping
     fig.tight_layout()
-    if Saving_path!= None:
-        fig.savefig(Saving_path+f"/latent_space_at_batch_{batch_idx}.pdf", bbox_inches = 'tight', format = "pdf")
-    # Return the figure object
+
+    if Saving_path is not None:
+        fig.savefig(Saving_path + f"/latent_space_at_batch_{batch_idx}.pdf", bbox_inches='tight', format="pdf")
+
+    # Return the figure
     return fig
