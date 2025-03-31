@@ -49,6 +49,19 @@ def aux_func(x,function, eps=0.0):
 
 # this also not vectorized
 def Sc_g_jacfwd (u, function, eps = 0.0):
+    """
+    Returns scalar curvature and metric, calls the domputation of the Riemann curvature tensor and Ricci tensor. 
+    Using forward-mode Jacobian derivatives.
+    
+    Parameters:
+    - u: The input points (typically data or latent points).
+    - function(decoder): The function (usually the decoder) whose gradient(Jacobian) defines the metric and curvature is being evaluated.
+    - eps: A small epsilon value used for regularization of the inverse of metric computation. (default is 0.0).
+
+    Returns:
+    - Sc: The scalar curvature computed from the Jacobian of the function at point u.
+    - g: The metric computed from the Jacobian of the function at point u.
+    """
     # compute Christoffel symbols and derivatives and inverse of metric
     dCh, (Ch, g, g_inv) = torch.func.jacfwd(functools.partial( aux_func, function=function, eps=eps),
                             has_aux=True)( u )
@@ -64,6 +77,20 @@ Sc_g_jacfwd_vmap = torch.func.vmap(Sc_g_jacfwd)
 
 # computing the loss
 def curvature_loss_jacfwd (points, function, eps = 0.0, reduction = "mean"):
+    """
+    Computes the curvature loss based on the Riemann curvature tensor, Ricci tensor, and scalar curvature.
+    Computation via forward propagation through jacfwd.
+
+    Parameters:
+    - points: The input points where the curvature loss is computed (typically the data or latent points).
+    - function: The function whose curvature is being evaluated.
+    - eps: A small epsilon value used for regularization of the inverse of metric computation. (default is 0.0).
+    - reduction (default = "mean"): How to reduce the computed loss ("mean" or "dict"). "mean" averages the loss, while "dict" returns the individual components.
+
+    Returns:
+    - If reduction is "mean": The mean curvature loss over the batch.
+    - If reduction is "dict": A dictionary containing the individual components used to compute the loss.
+    """
     # compute Christoffel symbols and derivatives and inverse of metric
     dCh, (Ch, g, g_inv) = torch.func.vmap( torch.func.jacfwd(functools.partial( aux_func, function=function, eps=eps),
                             has_aux=True) )( points )
@@ -75,7 +102,7 @@ def curvature_loss_jacfwd (points, function, eps = 0.0, reduction = "mean"):
     R = torch.einsum('bak,bak->b',g_inv,Ricci)
     if reduction == "mean":
         return ( ( R**2 ) * torch.sqrt( torch.det(g) ) ).mean()
-    elif reduction == "none":
+    elif reduction == "dict":
         dict = {
             "R": R,
             "g": g,

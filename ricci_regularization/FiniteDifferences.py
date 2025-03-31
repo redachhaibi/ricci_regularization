@@ -210,12 +210,14 @@ def Sc_g_fd_batch_minigrids_rhombus (centers, function, h=0.01, eps = 0.0):
     del Ricci, g_inv
     return Sc, g
 
-def curvature_loss(points, function, h, eps):
+def curvature_loss_fd(points, function, h, eps):
     # returns the curvature loss 
     R, g = Sc_g_fd_batch_minigrids_rhombus(centers = points, function = function, h = h, eps=eps)
     return ( ( R**2 ) * torch.sqrt( torch.det(g) ) ).mean()
 
 
+# ---------------------------------------------
+# Code below this line is old and slow
 # Uniform grids ( suboptimal with recurrence)
 # Grid covering the whole latent space
 def make_grid_fd(numsteps, xlim_left = -torch.pi, xlim_right = torch.pi,
