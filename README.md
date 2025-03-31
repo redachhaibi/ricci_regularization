@@ -11,16 +11,22 @@ The repository is structured as follows. We only describe the most important fil
 |-- ricci_regularization: Core of the package. 
 |  |-- Architectures.py : Choice of AE architectures: TorusAE, TorusConvAE, etc.
 |  |-- DataLoaders.py : Dataset loading and neural net weights loading.
+|  |-- FiniteDifferences.py : Computing all useful Riemannian geometry tensors via Finite differences.
+|  |-- Losscomputation.py : Train,test and loss comutation functions.
 |  |-- OODTools.py : functions for OOD sampling
-|  |-- Ricci.py : Computing all useful Riemannian geometry tensors
+|  |-- PlottingTools.py : Plotting in latent space: Manifold plots, heatmaps, etc..
+|  |-- Ricci.py : Computing all useful Riemannian geometry tensors via Autograd
+|  |-- RiemannianKmeansTools.py : Ingredients of K-means and its plotting.
+|  |-- Schauder.py : Schauder basis.
 |  |-- SyntheticGaussians.py : Creating the Synthetic Gaussians dataset
+
 
 |-- ipynb: Contains Python notebooks which demonstrate how the code works. Most important files:
 |  |-- AE_torus_training.ipynb: training of the AE 
 |  |-- AE_torus_report.ipynb: building the report
-|  |-- Geodesic_benchmark.ipynb: the Grid of geodesics and length ratio benchmark 
+|  |-- Geodesic_grids_via_Stochman.ipynb: the Grid of geodesics and length ratio benchmark 
 |  |-- torus3dembedding.ipynb: 3D Torus embedding
-|  |-- K-means.ipynb: Benchmark of K-means clustering performance
+|  |-- Riemannian_K-means.ipynb: Benchmark of K-means clustering performance
 
 |-- tests: TODO
 |-- README.md: This file
@@ -35,20 +41,20 @@ Step 2:
 Generate and visualize the report of the training. Launch ipynb/AE_torus_report.ipynb.
 
 Step 3:
-Check the geodesics in the latent space. Launch ipynb/Geodesic_benchmark.ipynb.
+Check the geodesics in the latent space. Launch ipynb/Geodesic_grids_via_Stochman.ipynb.
 
 Step 4:
 Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/torus3dembedding.ipynb.
 
 Step 5:
-Check clustering results with K-means. Launch ipynb/K-means.ipynb.
+Perform clustering with Riemannian K-means. Launch ipynb/Riemannian_K-means.ipynb.
 
 ## Installation
 
 1. Create new virtual environment
 
 ```bash
-$ python3 -m venv .venv_ricci
+python3 -m venv .venv_ricci
 ```
 
 (Do
@@ -58,15 +64,15 @@ if needed)
 3. Activate virtual environment
 
 ```bash
-$ source .venv_ricci/bin/activate
+source .venv_ricci/bin/activate
 ```
 
 4. Upgrade pip, wheel and setuptools 
 
 ```bash
-$ pip install --upgrade pip
-$ pip install --upgrade setuptools
-$ pip install wheel
+pip install --upgrade pip
+pip install --upgrade setuptools
+pip install wheel
 ```
 
 5. Install the `ricci_regularization` package.
