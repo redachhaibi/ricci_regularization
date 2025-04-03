@@ -23,7 +23,16 @@ setup(
 
     license='MIT License',
 
-    install_requires=["numpy", "matplotlib", "scipy", "scikit-learn", "torch", "torchvision", "tqdm", "pandas"],
+    install_requires=[
+        "numpy==1.26.4", 
+        "matplotlib", 
+        "scipy", 
+        "scikit-learn", 
+        "torch", 
+        "torchvision", 
+        "tqdm", 
+        "pandas"
+    ],
 
     keywords='',
 
