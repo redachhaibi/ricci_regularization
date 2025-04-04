@@ -26,7 +26,6 @@ The repository is structured as follows. We only describe the most important fil
 |  |-- AE_torus_report.ipynb: building the report
 |  |-- Geodesic_grids_via_Stochman.ipynb: the Grid of geodesics and length ratio benchmark 
 |  |-- torus3dembedding.ipynb: 3D Torus embedding
-|  |-- Riemannian_K-means.ipynb: Benchmark of K-means clustering performance
 
 |-- tests: TODO
 |-- README.md: This file
@@ -44,10 +43,12 @@ Step 3:
 Check the geodesics in the latent space. Launch ipynb/Geodesic_grids_via_Stochman.ipynb.
 
 Step 4:
-Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/torus3dembedding.ipynb.
+Check the quasi-isometric embedding of the Torus latent space. Launch ipynb/torus3dembedding.ipynb + Visualize with ipynb/Visualization/torus3dembedding.ipynb
 
 Step 5:
-Perform clustering with Riemannian K-means. Launch ipynb/Riemannian_K-means.ipynb.
+Perform clustering with Benchmarks/Chapter_5_multiple_RiemannianK-means_execution. Launch ipynb/Riemannian_K-means.ipynb.
+
+Step 6: Visualize clustering results with ipynb/Visualization/Chapter_5_Octopus_plotting.ipynb. Perform Euclidean clustering, compute F-scores and Voronoi's cells with ipynb/Visualization/Chapter_5_Clustering_report.ipynb
 
 ## Installation
 

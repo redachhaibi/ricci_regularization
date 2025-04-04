@@ -3,6 +3,17 @@ import functools
 
 # Jacobian norm for contractive loss computation
 def Jacobian_norm_jacrev(input_tensor, function, input_dim):
+    """
+    Computes the norm of the Jacobian matrix of a function using reverse-mode autodiff (jacrev).
+
+    Parameters:
+    - input_tensor (torch.Tensor): The input tensor to the function.
+    - function (Callable): The function whose Jacobian is to be computed.
+    - input_dim (int): Dimensionality of the input space.
+
+    Returns:
+    - torch.Tensor: Scalar representing the norm of the Jacobian matrix.
+    """
     input_tensor = input_tensor.reshape(-1,input_dim)
     return torch.func.jacrev(function)(input_tensor).norm()
 
@@ -11,6 +22,17 @@ Jacobian_norm_jacrev_vmap = torch.func.vmap(Jacobian_norm_jacrev)
 # Forward mode propagation via jacfwd
 
 def metric_jacfwd(u, function, latent_space_dim=2):
+    """
+    Computes the Riemannian metric (pullback metric) induced by a function (e.g., decoder) using forward-mode autodiff.
+
+    Parameters:
+    - u (torch.Tensor): Input point(s) of shape (latent_space_dim,) or batch of points.
+    - function (Callable): Function (typically decoder) whose Jacobian defines the metric.
+    - latent_space_dim (int): Dimensionality of the latent space (default=2).
+
+    Returns:
+    - torch.Tensor: The Riemannian metric (symmetric positive semi-definite matrix) at the input point.
+    """
     u = u.reshape(-1,latent_space_dim)
     jac = torch.func.jacfwd(function)(u)
     jac = jac.reshape(-1,latent_space_dim)
@@ -22,6 +44,16 @@ metric_jacfwd_vmap = torch.func.vmap(metric_jacfwd)
 # this function is auxiliary in computing metric and its derivatives later
 # as one needs to output both the result and its derivative simultanuousely 
 def aux_func_metric(x, function):
+    """
+    Auxiliary function used to return both the Riemannian metric and its value for use with jacfwd.
+
+    Parameters:
+    - x (torch.Tensor): Input tensor.
+    - function (Callable): Function (typically decoder) to compute the metric.
+
+    Returns:
+    - Tuple[torch.Tensor, torch.Tensor]: The metric tensor and a copy (for use with `has_aux=True` in `jacfwd`).
+    """
     g = metric_jacfwd( x, function=function)
     return g, g
 
@@ -113,6 +145,76 @@ def curvature_loss_jacfwd (points, function, eps = 0.0, reduction = "mean"):
         }
         return dict
 
+# ------------------------------------------
+# various custom embeddings (use instead of the 'decoder') used foe ground truth checks 
+# polynomial local diffeomorphysm of R^2
+def my_fun_polinomial(u):
+    u = u.flatten()
+    x = u[0]
+    y = u[1]
+
+    x_out = x**2 + y + 37*x
+    y_out = y**3+x*y
+
+    x_out = x_out.unsqueeze(0)
+    y_out = y_out.unsqueeze(0)
+    output = torch.cat((x_out, y_out),dim=-1)
+    output = output.flatten()
+    return output
+
+# Functions with sphere and Lobachevsky plane pullback metrics
+# Sphere embedding
+# Input: u is a 2d-vector with longitude and lattitude
+# Outut: output contains the 3d coordinates of sphere and padded with zeros (781 dimension)
+#        -> 784 dim in total
+# u = (\theta, \phi)
+# ds^2 = (d\theta)^2 + sin^2(\theta)*(d\phi)^2
+def my_fun_sphere(u,D=3):
+    #u = u.flatten()
+    ushape = u.shape
+    u = u.reshape(-1,2)
+    x = torch.cos(u[:,0])*torch.cos(u[:,1])
+    y = torch.cos(u[:,0])*torch.sin(u[:,1])
+    z = torch.sin(u[:,0])
+
+    output = torch.stack((x, y, z),dim=-1)
+    output = output.reshape((*ushape[:-1],3))
+    """
+    x = torch.sin(u[:,0])*torch.cos(u[:,1])
+    y = torch.sin(u[:,0])*torch.sin(u[:,1])
+    z = torch.cos(u[:,0])
+
+    x = x.unsqueeze(1)
+    y = y.unsqueeze(1)
+    z = z.unsqueeze(1)
+    output = torch.cat((x, y, z),dim=-1)
+    """
+    if D>3:
+        output = torch.cat((output.unsqueeze(0),torch.zeros(D-3).unsqueeze(0)),dim=1)
+    #output = output.flatten()
+    return output
+
+# Hyperbolic plane embedding
+# Partial embedding (for y>c) of Lobachevsky plane to R^3 
+# (formally here it is R^784)
+# ds^2 = 1/y^2(dx^2 + dy^2)
+# http://www.antoinebourget.org/maths/2018/08/08/embedding-hyperbolic-plane.html
+def my_fun_lobachevsky(u, c=0.01):
+    u = u.flatten()
+    x = u[0]
+    y = u[1]
+    t = torch.acosh(y/c)
+    x0 = t - torch.tanh(t)
+    x1 = (1/torch.sinh(t))*torch.cos(x/c)
+    x2 = (1/torch.sinh(t))*torch.sin(x/c)
+    output = torch.cat((x0.unsqueeze(0),x1.unsqueeze(0),x2.unsqueeze(0)),dim=-1)
+    output = torch.cat((output.unsqueeze(0),torch.zeros(781).unsqueeze(0)),dim=1)
+    output = output.flatten()
+    return output
+
+
+# older and inefficeint ways of curvature computation (with recursive hell)
+# to be deprecated
 def metric_inv_jacfwd(u, function, eps=0.0):
     g = metric_jacfwd(u,function)
     d = g.shape[0]
@@ -262,72 +364,6 @@ def Sc_jacrev (u, function):
     Sc = torch.einsum('ab,ab',metric_inv,Ricci)
     return Sc
 Sc_jacrev_vmap = torch.func.vmap(Sc_jacrev)
-
-
-# polynomial local diffeomorphysm of R^2
-def my_fun_polinomial(u):
-    u = u.flatten()
-    x = u[0]
-    y = u[1]
-
-    x_out = x**2 + y + 37*x
-    y_out = y**3+x*y
-
-    x_out = x_out.unsqueeze(0)
-    y_out = y_out.unsqueeze(0)
-    output = torch.cat((x_out, y_out),dim=-1)
-    output = output.flatten()
-    return output
-
-# Functions with sphere and Lobachevsky plane pullback metrics
-# Sphere embedding
-# Input: u is a 2d-vector with longitude and lattitude
-# Outut: output contains the 3d coordinates of sphere and padded with zeros (781 dimension)
-#        -> 784 dim in total
-# u = (\theta, \phi)
-# ds^2 = (d\theta)^2 + sin^2(\theta)*(d\phi)^2
-def my_fun_sphere(u,D=3):
-    #u = u.flatten()
-    ushape = u.shape
-    u = u.reshape(-1,2)
-    x = torch.cos(u[:,0])*torch.cos(u[:,1])
-    y = torch.cos(u[:,0])*torch.sin(u[:,1])
-    z = torch.sin(u[:,0])
-
-    output = torch.stack((x, y, z),dim=-1)
-    output = output.reshape((*ushape[:-1],3))
-    """
-    x = torch.sin(u[:,0])*torch.cos(u[:,1])
-    y = torch.sin(u[:,0])*torch.sin(u[:,1])
-    z = torch.cos(u[:,0])
-
-    x = x.unsqueeze(1)
-    y = y.unsqueeze(1)
-    z = z.unsqueeze(1)
-    output = torch.cat((x, y, z),dim=-1)
-    """
-    if D>3:
-        output = torch.cat((output.unsqueeze(0),torch.zeros(D-3).unsqueeze(0)),dim=1)
-    #output = output.flatten()
-    return output
-
-# Hyperbolic plane embedding
-# Partial embedding (for y>c) of Lobachevsky plane to R^3 
-# (formally here it is R^784)
-# ds^2 = 1/y^2(dx^2 + dy^2)
-# http://www.antoinebourget.org/maths/2018/08/08/embedding-hyperbolic-plane.html
-def my_fun_lobachevsky(u, c=0.01):
-    u = u.flatten()
-    x = u[0]
-    y = u[1]
-    t = torch.acosh(y/c)
-    x0 = t - torch.tanh(t)
-    x1 = (1/torch.sinh(t))*torch.cos(x/c)
-    x2 = (1/torch.sinh(t))*torch.sin(x/c)
-    output = torch.cat((x0.unsqueeze(0),x1.unsqueeze(0),x2.unsqueeze(0)),dim=-1)
-    output = torch.cat((output.unsqueeze(0),torch.zeros(781).unsqueeze(0)),dim=1)
-    output = output.flatten()
-    return output
 
 #----------------
 # the following is not used
