@@ -503,7 +503,7 @@ def plot_knn_decision_boundary(encoded_points, labels_for_coloring,
         plt.close()
     return
 
-#older version to be deprecated
+#older version without interpolation. to be deprecated
 def plot_knn_decision_boundary_nonsmooth(encoded_points, labels_for_coloring, 
         grid_resolution = 100, 
         neighbours_number = 7, distance_computation_mode = "torus",
@@ -642,6 +642,7 @@ def compute_f_measure(P_labels, Q_labels):
     return F_measure
 
 #-----------------------------------------------------
+# loading data for clustering
 def get_validation_dataset(yaml_config):
     # Load data loaders based on YAML configuration
     dict = ricci_regularization.DataLoaders.get_dataloaders(
@@ -700,7 +701,45 @@ def load_points_for_clustering(validation_dataset, random_seed_picking_points, y
                 file_saving_name="Manifold_plot_selected_labels", verbose=verbose)
     return encoded_points, ground_truth_labels
 
+# main function executing Riemannian Kmeans 
 def Riemannian_k_means_fit(encoded_points, params):
+    """
+    Executes the Riemannian K-Means clustering algorithm on data points encoded in a latent space.
+
+    This algorithm clusters data points on a Riemannian manifold metric on which 
+    is set by the pullback of Euclidean metric by the decoder.
+    The algorithm iteratively minimizes the geodesic energy between each point and its assigned cluster centroid. 
+    It supports different modes for geodesic computation: interpolation points or Schauder basis.
+
+    Parameters:
+        encoded_points (torch.Tensor): Encoded data points of shape (N, d), where N is the number of points and d is the dimension.
+        params (dict): A dictionary of algorithm hyperparameters including:
+            - N (int): Number of data points.
+            - periodicity_mode (str): Mode to handle periodicity in the latent space.
+            - K (int): Number of clusters.
+            - torus_ae (nn.Module): Autoencoder model with a decoder for the torus manifold.
+            - d (int): Dimensionality of the latent space.
+            - beta (float): Step size for centroid updates.
+            - learning_rate (float): Learning rate for geodesic optimization.
+            - num_iter_outer (int): Number of outer iterations (cluster reassignment and centroid update).
+            - num_iter_inner (int): Number of inner iterations (geodesic path optimization).
+            - device (torch.device): Computation device (CPU or GPU).
+            - mode (str): Geodesic computation mode ('Interpolation_points' or 'Schauder').
+            - n_max (int): Maximal order of Schauder basis elements.
+            - step_count (int): Number of steps or auxiliary points on each geodesic segment.
+
+    Returns:
+        dict: A dictionary containing:
+            - "Riemannian_k_means_labels" (List[int]): Cluster index assigned to each data point.
+            - "history" (List[dict]): A list of dicts tracking training progress, including:
+                - intraclass_variance
+                - intraclass_variance_by_cluster
+                - norm_Frechet_mean_gradient
+                - geodesics_to_nearest_centroids_lengths
+                - geodesics_to_nearest_centroids_lengths_by_cluster
+            - "geodesic_curve" (torch.Tensor): Tensor of shape (N, step_count, d) containing geodesic paths from each point to its assigned centroid.
+            - "time_secs" (float): Total execution time in seconds.
+    """
     N = params["N"]
     periodicity_mode = params["periodicity_mode"]
     K = params["K"]
