@@ -29,7 +29,7 @@ loss_settings:
   lambda_recon: 1.0                # Weight for reconstruction (mean squared) error in the loss function
   lambda_unif: 1.e-4               # Weight for week convergence to uniform distribution in the loss function
   lambda_curv: 1.e-3               # Weight for curvature regularization
-  lambda_contractive_encoder: 0.0  # Weight for contractive encoder
+  lambda_contractive: 0.0  # Weight for contractive encoder
          
   num_moments: 4                   # Number of empirical moments of the distribution penalized in the loss function
   delta_encoder: 0.0               # Threshold parameter for the contractive loss

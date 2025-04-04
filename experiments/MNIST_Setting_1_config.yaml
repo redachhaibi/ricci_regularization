@@ -34,5 +34,5 @@ training_mode:
   OOD_regime: false                    # Out-of-distribution regime on/off flag
   compute_contractive_loss: false      # Flag to indicate whether to compute contractive loss
   compute_curvature: false             # Flag to indicate whether to compute curvature
-  curvature_computation_mode: jacfwd   # Mode used for curvature computation
+ #curvature_computation_mode: jacfwd   # Mode used for curvature computation
   diagnostic_mode: false               # Diagnostic mode flag: printing all loss plots
