@@ -1,6 +1,8 @@
 import torch
 import functools
 
+# notations have to be clearer use full names
+
 # Jacobian norm for contractive loss computation
 def Jacobian_norm_jacrev(input_tensor, function, input_dim):
     """
@@ -59,6 +61,20 @@ def aux_func_metric(x, function):
 
 # this also not vectorized
 def Ch_g_g_inv_jacfwd (u, function, eps = 0.0):
+    """
+    Computes Christoffel symbols, metric tensor, and inverse metric using forward-mode autodiff.
+
+    Parameters:
+    - u (torch.Tensor): Input point where the geometric quantities are evaluated.
+    - function (Callable): Function (typically decoder) inducing the Riemannian metric.
+    - eps (float): Small value added to the diagonal for numerical stability (default=0.0).
+
+    Returns:
+    - Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        - Christoffel symbols: tensor of shape (dim, dim, dim)
+        - Metric tensor: shape (dim, dim)
+        - Inverse metric tensor: shape (dim, dim)
+    """
     # compute metric and its derivatives at a batch of points
     dg, g = torch.func.jacfwd( functools.partial(aux_func_metric, function=function),
                          has_aux=True)( u )
@@ -74,12 +90,26 @@ def Ch_g_g_inv_jacfwd (u, function, eps = 0.0):
     return Ch, g, g_inv
 
 def aux_func(x,function, eps=0.0):
+    """
+    Auxiliary function to return Christoffel symbols and additional metric quantities for use in higher-order derivatives.
+
+    Parameters:
+    - x (torch.Tensor): Input tensor.
+    - function (Callable): Decoder or similar function.
+    - eps (float): Regularization parameter for metric inversion (default=0.0).
+
+    Returns:
+    - Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+        - Christoffel symbols,
+        - Tuple of (Christoffel symbols, metric, inverse metric).
+    """
     Ch, g, g_inv = Ch_g_g_inv_jacfwd( x, function=function, eps=eps)
     return Ch, (Ch, g, g_inv)
 #dCh, (Ch, g_inv) = vmap(jacfwd(functools.partial( aux_func, function=decoder, eps=0. ),
 #                            has_aux=True))( points )
 
-# this also not vectorized
+# computation of Scalar curvature and metric
+# redundunt with curvature_loss_jacfwd has to be substituted in ipynb files and deprecated.
 def Sc_g_jacfwd (u, function, eps = 0.0):
     """
     Returns scalar curvature and metric, calls the domputation of the Riemann curvature tensor and Ricci tensor. 
